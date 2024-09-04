@@ -1,0 +1,71 @@
+Metrics DEFINITIONS AUTOMATIC TAGS ::=
+
+BEGIN
+    Events ::= SEQUENCE OF Event
+
+    Event ::= CHOICE {
+        metadata SEQUENCE {
+            keyName      UTF8String,
+            metricType   MetricType,
+            unit         Unit OPTIONAL,
+            description  UTF8String
+        },
+        metric SEQUENCE {
+            key SEQUENCE {
+                name UTF8String,
+                label SEQUENCE OF SEQUENCE {
+                    key UTF8String,
+                    value UTF8String
+                }
+            },
+            op MetricOperation
+        }
+    }
+
+    MetricOperation ::= CHOICE {
+        incrementCounter INTEGER,
+        setCounter       INTEGER,
+        -- represent f64 as raw 8 byte IEEE 754-2008
+        incrementGauge   OCTET STRING (SIZE(8)),
+        decrementGauge   OCTET STRING (SIZE(8)),
+        setGauge         OCTET STRING (SIZE(8)),
+        recordHistogram  OCTET STRING (SIZE(8))
+    }
+
+    MetricType ::= ENUMERATED {
+        counter,
+        gauge,
+        histogram
+    }
+
+    Unit ::= ENUMERATED {
+        count,
+        percent,
+        -- One second is equal to 1000 milliseconds
+        seconds,
+        -- One millisecond is equal to 1000 microseconds
+        milliseconds,
+        -- One microsecond is equal to 1000 nanoseconds
+        microseconds,
+        nanoseconds,
+        -- One tebibyte is equal to 1024 gigibytes
+        tebibytes,
+        -- One gigibyte is equal to 1024 mebibytes
+        gigibytes,
+        -- One mebibyte is equal to 1024 kibibytes
+        mebibytes,
+        -- One kibibyte is equal to 1024 bytes
+        kibibytes,
+        bytes,
+        -- One terabit is equal to 1000 gigabits
+        terabitsPerSecond,
+        -- One gigabit is equal to 1000 megabits
+        gigabitsPerSecond,
+        -- One megabit is equal to 1000 kilobits
+        megabitsPerSecond,
+        -- One kilobit is equal to 1000 bits
+        kilobitsPerSecond,
+        bitsPerSecond,
+        countPerSecond
+    }
+END

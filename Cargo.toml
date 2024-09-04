@@ -1,0 +1,51 @@
+[package]
+name = "metrics-exporter-wasm"
+version = "0.1.0"
+authors = ["hyper.video <team@hyper.video>"]
+categories = ["development-tools::debugging"]
+edition = "2021"
+keywords = ["metrics", "telemetry", "wasm"]
+description = "A metrics-compatible exporter meant for browser WASM applications that outputs metrics over HTTP."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+bitvec = "1.0.1"
+bytes = { version = "1.7.1", default-features = false }
+chrono = { version = "0.4.39", default-features = false, features = ["serde"] }
+color-eyre = "0.6.3"
+console_error_panic_hook = "0.1.7"
+crossbeam-channel = { version = "0.5.14", features = ["std"] }
+eyre = "0.6.12"
+gloo = "0.11.0"
+metrics = { version = "0.23.0" }
+metrics-util = "0.17.0"
+portable-atomic = "1.7.0"
+serde = { version = "1.0.209", features = ["derive"] }
+thiserror = "2.0.11"
+tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
+tracing-subscriber = "0.3.18"
+wasm-bindgen = { version = "0.2.100", default-features = false }
+wasm-tracing = { git = "https://github.com/hypervideo/wasm-tracing", rev = "351a117449b51cdbf2b7c51386fe999a37a7efe7" }
+
+[dependencies.asn1rs]
+git = "https://github.com/hypervideo/asn1rs"
+rev = "f101f1315ad80dd60d9d4aabfaf9e567467a2cac"
+default-features = false
+features = ["macros", "model"]
+
+[dependencies.web-sys]
+version = "0.3.76"
+features = ["Performance", "PerformanceEntry", "PerformanceMark", "PerformanceMeasure", "Document", "Window"]
+
+[target.'cfg(target_pointer_width = "32")'.dependencies]
+portable-atomic = { version = "1", default-features = false, features = ["fallback"] }
+
+[build-dependencies.asn1rs]
+git = "https://github.com/hypervideo/asn1rs"
+rev = "f101f1315ad80dd60d9d4aabfaf9e567467a2cac"
+
+[features]
+default = []
+asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]

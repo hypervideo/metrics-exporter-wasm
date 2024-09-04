@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wasm Example</title>
+</head>
+<body>
+    <h1>Hello, WebAssembly!</h1>
+    <script type="module">
+        import init, { setup, run_asn_benchmark } from './dist/metrics_exporter_wasm.js';
+        async function run() {
+            await init();
+            setup();
+            run_asn_benchmark();
+            console.log("COMPLETED");
+        }
+        run();
+    </script>
+</body>
+</html>
