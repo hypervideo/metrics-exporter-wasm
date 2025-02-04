@@ -1,5 +1,8 @@
 mod asn_benchmark;
 mod benchmark;
+mod metrics_test;
+
+pub use metrics_test::run as run_metrics_test;
 
 use wasm_bindgen::prelude::*;
 
@@ -22,10 +25,10 @@ pub fn setup() {
     color_eyre::install().expect("color_eyre init");
     console_error_panic_hook::set_once();
     wasm_tracing::set_as_global_default();
-    log!("setup");
+    log!("tracing setup complete");
 }
 
-#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+#[wasm_bindgen]
 pub fn run_asn_benchmark() {
     asn_benchmark::run();
 }

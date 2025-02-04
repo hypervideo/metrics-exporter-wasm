@@ -90,14 +90,22 @@ impl WasmRecorderBuilder {
             unbounded()
         };
 
-        // thread::spawn(move || run_transport(poll, listener, rx, state, buffer_size));
+        wasm_bindgen_futures::spawn_local({
+            let state = Arc::new(State::new(tx.clone()));
+            let buffer_size = self.buffer_size;
+            async move {
+                run_transport(rx, state, buffer_size);
+            }
+        });
 
-        Ok(WasmRecorder::with_sender(tx))
+        Ok(WasmRecorder {
+            state: Arc::new(State::new(tx)),
+            handle: None,
+        })
     }
 
     pub fn install(self) -> Result<(), SetRecorderError<WasmRecorder>> {
-        let recorder = self.build()?;
-        metrics::set_global_recorder(recorder)
+        self.build()?.install()
     }
 
     pub fn buffer_size(mut self, size: Option<usize>) -> Self {
@@ -116,11 +124,8 @@ impl WasmRecorder {
         WasmRecorderBuilder { buffer_size: None }
     }
 
-    pub fn with_sender(tx: Sender<Event>) -> Self {
-        Self {
-            state: Arc::new(State::new(tx)),
-            handle: None,
-        }
+    pub fn install(self) -> Result<(), SetRecorderError<Self>> {
+        metrics::set_global_recorder(self)
     }
 }
 
@@ -200,4 +205,28 @@ impl HistogramFn for Handle {
         self.state
             .push_metric(&self.key, MetricOperation::RecordHistogram(value))
     }
+}
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+fn run_transport(rx: Receiver<Event>, state: Arc<State>, buffer_size: Option<usize>) {
+    // let buffer_limit = buffer_size.unwrap_or(std::usize::MAX);
+    // // let mut events = crate::types::asn1::Events::with_capacity(1024);
+    // let mut clients = std::collections::HashMap::new();
+    // let mut clients_to_remove = Vec::new();
+    // let mut metadata = std::collections::HashMap::new();
+    // let mut buffered_pmsgs = std::collections::VecDeque::with_capacity(buffer_limit);
+
+    debug!("starting metrics transport");
+
+    loop {
+        let Ok(event) = rx.recv() else {
+            debug!("metrics transport lost all senders");
+            break;
+        };
+
+        info!(?event, "received metrics event");
+    }
+
+    debug!("metrics transport stopped");
 }

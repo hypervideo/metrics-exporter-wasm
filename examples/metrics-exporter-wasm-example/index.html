@@ -3,19 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wasm Example</title>
+    <title>metrics-exporter-wasm example</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 0;
+        background-color: #333;
+
+        color: #fff;
+      }
+    </style>
 </head>
 <body>
-    <h1>Hello, WebAssembly!</h1>
+    <h1>metrics-exporter-wasm</h1>
+
+    <div style="display: flex; flex-direction: column; align-items: center; margin-top: 20px; gap: 16px;">
+      <button onclick="run_asn_benchmark()">Run ASN Benchmark</button>
+      <button onclick="run_metrics_test()">Metrics Test</button>
+    </div>
+
     <script type="module">
-        import init, { setup, run_asn_benchmark } from './dist/metrics_exporter_wasm_example.js';
-        async function run() {
+        import init, { setup, run_asn_benchmark, run_metrics_test } from './dist/metrics_exporter_wasm_example.js';
+        async function start() {
             await init();
             setup();
-            run_asn_benchmark();
-            console.log("COMPLETED");
         }
-        run();
+        start();
+
+        window.run_asn_benchmark = run_asn_benchmark;
+        window.run_metrics_test = run_metrics_test;
     </script>
 </body>
 </html>

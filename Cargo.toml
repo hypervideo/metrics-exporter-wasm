@@ -14,6 +14,7 @@ crossbeam-channel = { version = "0.5.14", features = ["std"] }
 metrics = { version = "0.23.0" }
 portable-atomic = { version = "1.7.0", default-features = false, features = ["fallback"] }
 serde = { version = "1.0.209", features = ["derive"] }
+wasm-bindgen-futures = "0.4.49"
 
 [workspace.dependencies.asn1rs]
 git = "https://github.com/hypervideo/asn1rs"
@@ -43,6 +44,8 @@ crossbeam-channel.workspace = true
 metrics.workspace = true
 portable-atomic.workspace = true
 serde.workspace = true
+tracing = "0.1.41"
+wasm-bindgen-futures.workspace = true
 
 [target.'cfg(target_pointer_width = "32")'.dependencies]
 portable-atomic.workspace = true

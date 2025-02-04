@@ -14,7 +14,7 @@ build-release:
 
 dev: build
     concurrently --kill-others \
-      "fd -e rs | entr just example-build" \
+      "fd -e rs -e toml | entr -r just build" \
       "live-server --no-browser"
 
 serve: build-release
