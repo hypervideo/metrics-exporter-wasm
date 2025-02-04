@@ -1,25 +1,48 @@
 #![allow(unused_variables)]
 
+use crate::{
+    Event,
+    MetricOperation,
+    MetricType,
+};
 use metrics::{
-    Counter, CounterFn, Gauge, GaugeFn, Histogram, HistogramFn, Key, KeyName, Metadata, Recorder,
-    SetRecorderError, SharedString, Unit,
+    Counter,
+    CounterFn,
+    Gauge,
+    GaugeFn,
+    Histogram,
+    HistogramFn,
+    Key,
+    KeyName,
+    Metadata,
+    Recorder,
+    SetRecorderError,
+    SharedString,
+    Unit,
 };
-
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
 #[cfg(target_pointer_width = "32")]
 pub use portable_atomic::AtomicU64;
 #[cfg(not(target_pointer_width = "32"))]
 pub use std::sync::atomic::AtomicU64;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-
-use crate::types::{Event, MetricOperation, MetricType};
+use std::sync::{
+    atomic::{
+        AtomicBool,
+        Ordering,
+    },
+    Arc,
+};
+use tokio::sync::mpsc::{
+    channel,
+    Receiver,
+    Sender,
+};
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+/// The state of the metrics recorder. Tracks the number of clients and holds
+/// the sender for sending new metrics to the async processing handler. That
+/// handler will forward the metrics to other subscribers inside the app itself
+/// or send the metrics to a remote server.
 struct State {
     client_count: AtomicU64,
     should_send: AtomicBool,
@@ -27,7 +50,7 @@ struct State {
 }
 
 impl State {
-    pub fn new(tx: Sender<Event>) -> State {
+    fn new(tx: Sender<Event>) -> State {
         State {
             client_count: AtomicU64::new(0),
             should_send: AtomicBool::new(false),
@@ -35,16 +58,16 @@ impl State {
         }
     }
 
-    pub fn should_send(&self) -> bool {
+    fn should_send(&self) -> bool {
         self.should_send.load(Ordering::Acquire)
     }
 
-    pub fn increment_clients(&self) {
+    fn increment_clients(&self) {
         self.client_count.fetch_add(1, Ordering::AcqRel);
         self.should_send.store(true, Ordering::Release);
     }
 
-    pub fn decrement_clients(&self) {
+    fn decrement_clients(&self) {
         let count = self.client_count.fetch_sub(1, Ordering::AcqRel);
         if count == 1 {
             self.should_send.store(false, Ordering::Release);
@@ -58,13 +81,7 @@ impl State {
         unit: Option<Unit>,
         description: SharedString,
     ) {
-        trace!(
-            ?key_name,
-            ?metric_type,
-            ?unit,
-            ?description,
-            "registering metric"
-        );
+        trace!(?key_name, ?metric_type, ?unit, ?description, "registering metric");
         let tx = self.tx.clone();
         wasm_bindgen_futures::spawn_local(async move {
             let _ = tx
@@ -84,12 +101,7 @@ impl State {
         let key = key.clone();
         if self.should_send() {
             wasm_bindgen_futures::spawn_local(async move {
-                let _ = tx
-                    .send(Event::Metric {
-                        key: key.clone(),
-                        op,
-                    })
-                    .await;
+                let _ = tx.send(Event::Metric { key: key.clone(), op }).await;
             });
         }
     }
@@ -97,11 +109,13 @@ impl State {
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+/// A builder for a [`WasmRecorder`].
 pub struct WasmRecorderBuilder {
     buffer_size: Option<usize>,
 }
 
 impl WasmRecorderBuilder {
+    /// Create a new builder for a [`WasmRecorder`].
     pub fn build(self) -> Result<WasmRecorder, SetRecorderError<WasmRecorder>> {
         let (tx, rx) = if let Some(size) = self.buffer_size {
             channel(size)
@@ -122,25 +136,30 @@ impl WasmRecorderBuilder {
         Ok(WasmRecorder { state })
     }
 
+    /// Install this recorder as the global recorder.
     pub fn install(self) -> Result<(), SetRecorderError<WasmRecorder>> {
         self.build()?.install()
     }
 
+    /// Set the buffer size for the metrics transport.
     pub fn buffer_size(mut self, size: Option<usize>) -> Self {
         self.buffer_size = size;
         self
     }
 }
 
+/// A metrics recorder for use in WASM environments.
 pub struct WasmRecorder {
     state: Arc<State>,
 }
 
 impl WasmRecorder {
+    /// Create a new builder for a [`WasmRecorder`].
     pub fn builder() -> WasmRecorderBuilder {
         WasmRecorderBuilder { buffer_size: None }
     }
 
+    /// Install this recorder as the global recorder.
     pub fn install(self) -> Result<(), SetRecorderError<Self>> {
         metrics::set_global_recorder(self)
     }
@@ -148,13 +167,11 @@ impl WasmRecorder {
 
 impl Recorder for WasmRecorder {
     fn describe_counter(&self, key: KeyName, unit: Option<Unit>, description: SharedString) {
-        self.state
-            .register_metric(key, MetricType::Counter, unit, description);
+        self.state.register_metric(key, MetricType::Counter, unit, description);
     }
 
     fn describe_gauge(&self, key: KeyName, unit: Option<Unit>, description: SharedString) {
-        self.state
-            .register_metric(key, MetricType::Gauge, unit, description);
+        self.state.register_metric(key, MetricType::Gauge, unit, description);
     }
 
     fn describe_histogram(&self, key: KeyName, unit: Option<Unit>, description: SharedString) {
@@ -195,8 +212,7 @@ impl CounterFn for Handle {
     }
 
     fn absolute(&self, value: u64) {
-        self.state
-            .push_metric(&self.key, MetricOperation::SetCounter(value))
+        self.state.push_metric(&self.key, MetricOperation::SetCounter(value))
     }
 }
 
@@ -212,8 +228,7 @@ impl GaugeFn for Handle {
     }
 
     fn set(&self, value: f64) {
-        self.state
-            .push_metric(&self.key, MetricOperation::SetGauge(value))
+        self.state.push_metric(&self.key, MetricOperation::SetGauge(value))
     }
 }
 

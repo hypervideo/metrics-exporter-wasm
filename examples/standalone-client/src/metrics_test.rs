@@ -8,9 +8,7 @@ pub fn setup() {
     // let snapshotter = recorder.snapshotter();
     // let snap = snapshotter.snapshot();
 
-    let recorder = WasmRecorder::builder()
-        .build()
-        .expect("failed to install recorder");
+    let recorder = WasmRecorder::builder().build().expect("failed to install recorder");
 
     recorder.install().expect("failed to install recorder");
 

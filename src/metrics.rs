@@ -1,15 +1,81 @@
 //! asn.1 metrics implementation using the asn1rs crate
 
-use super::{Event, MetricOperation, MetricType};
+use metrics::{
+    Key,
+    KeyName,
+    SharedString,
+    Unit,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
+
+// These types are "public" interface. The asn1 generated types are a bit more
+// complex, to simplify, we provide these representations that can be converted
+// back and forth.
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Event {
+    Metadata {
+        name: KeyName,
+        metric_type: MetricType,
+        unit: Option<Unit>,
+        description: SharedString,
+    },
+    Metric {
+        key: Key,
+        op: MetricOperation,
+    },
+}
+
+/// The metric type.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MetricType {
+    /// A counter is a cumulative metric that represents a single monotonically
+    /// increasing counter whose value can only increase or be reset to zero on
+    /// restart. For example, you can use a counter to represent the number of
+    /// requests served, tasks completed, or errors.
+    Counter,
+    /// A gauge is a metric that represents a single numerical value that can
+    /// arbitrarily go up and down. Gauges are typically used for measured
+    /// values like temperatures or current memory usage, but also "counts" that
+    /// can go up and down, like the number of concurrent requests.
+    Gauge,
+    /// A histogram samples observations (usually things like request durations
+    /// or response sizes) and counts them in configurable buckets. It also
+    /// provides a sum of all observed values.
+    Histogram,
+}
+
+/// Describes what the metric operation does.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+pub enum MetricOperation {
+    /// Increment a counter by a given value.
+    IncrementCounter(u64),
+    /// Set a counter to a given value.
+    SetCounter(u64),
+    /// Increment a gauge by a given value.
+    IncrementGauge(f64),
+    /// Decrement a gauge by a given value.
+    DecrementGauge(f64),
+    /// Set a gauge to a given value.
+    SetGauge(f64),
+    /// Record a histogram value.
+    RecordHistogram(f64),
+}
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 use asn1rs::prelude::*;
 pub use generated::Events;
-use metrics::{Key, Label, Unit};
 
 mod generated {
     include!(concat!(env!("OUT_DIR"), "/metrics.rs"));
 }
 
 impl generated::Events {
+    /// Serialize the events using asn1.
     pub fn serialize_with_asn1rs(&self) -> Result<Vec<u8>, asn1rs::protocol::per::Error> {
         let mut writer = UperWriter::default();
         writer.write(self)?;
@@ -17,6 +83,7 @@ impl generated::Events {
         Ok(writer.into_bytes_vec())
     }
 
+    /// Deserialize from asn1.
     pub fn deserialize_with_asn1rs(data: &[u8]) -> Result<Self, asn1rs::protocol::per::Error> {
         let mut reader = UperReader::from(Bits::from(data));
         reader.read::<generated::Events>()
@@ -24,6 +91,7 @@ impl generated::Events {
 }
 
 impl Event {
+    /// Serialize the events using asn1.
     pub fn serialize_with_asn1rs(self) -> Result<Vec<u8>, asn1rs::protocol::per::Error> {
         let mut writer = UperWriter::default();
         writer.write(&generated::Event::from(self))?;
@@ -31,6 +99,7 @@ impl Event {
         Ok(writer.into_bytes_vec())
     }
 
+    /// Deserialize from asn1.
     pub fn deserialize_with_asn1rs(data: &[u8]) -> Result<Self, asn1rs::protocol::per::Error> {
         let mut reader = UperReader::from(Bits::from(data));
         Ok(reader.read::<generated::Event>()?.into())
@@ -45,7 +114,11 @@ impl From<generated::Events> for Vec<Event> {
 
 impl From<generated::Event> for Event {
     fn from(value: generated::Event) -> Self {
-        use generated::{EventMetadata, EventMetric, EventMetricKey};
+        use generated::{
+            EventMetadata,
+            EventMetric,
+            EventMetricKey,
+        };
         match value {
             generated::Event::Metadata(EventMetadata {
                 key_name: name,
@@ -65,7 +138,7 @@ impl From<generated::Event> for Event {
             }) => {
                 let labels = label
                     .into_iter()
-                    .map(|entry| Label::new(entry.key, entry.value))
+                    .map(|entry| metrics::Label::new(entry.key, entry.value))
                     .collect::<Vec<_>>();
                 let key = Key::from_parts(name, labels);
                 Event::Metric { key, op: op.into() }
@@ -131,7 +204,12 @@ impl From<Vec<Event>> for generated::Events {
 
 impl From<Event> for generated::Event {
     fn from(value: Event) -> Self {
-        use generated::{EventMetadata, EventMetric, EventMetricKey, EventMetricKeyLabel};
+        use generated::{
+            EventMetadata,
+            EventMetric,
+            EventMetricKey,
+            EventMetricKeyLabel,
+        };
         match value {
             Event::Metadata {
                 name,

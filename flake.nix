@@ -19,7 +19,6 @@
         rust-toolchain = with fenixPkgs; combine [
           targets.wasm32-unknown-unknown.latest.rust-std
           latest.toolchain
-          rustfmt-nightly
         ];
       in
       {
@@ -30,6 +29,7 @@
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             rust-toolchain
+            rustfmt-nightly
             pkg-config
           ];
 
@@ -42,7 +42,6 @@
             cargo-criterion
             cargo-nextest
             wabt
-            rustfmt
             rust-analyzer
 
             wasm-bindgen-cli

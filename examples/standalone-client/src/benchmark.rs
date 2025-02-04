@@ -90,7 +90,10 @@ fn now() -> f64 {
 
 #[cfg(not(target_arch = "wasm32"))]
 fn now() -> f64 {
-    use std::{sync::LazyLock, time::Instant};
+    use std::{
+        sync::LazyLock,
+        time::Instant,
+    };
     static START: LazyLock<Instant> = LazyLock::new(Instant::now);
     (Instant::now() - *START).as_secs_f64() * 1000.0
 }
