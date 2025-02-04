@@ -1,7 +1,5 @@
-use crate::{
-    log,
-    types::{self, asn1},
-};
+use crate::log;
+use metrics_exporter_wasm::types::{self, asn1};
 
 pub fn run() {
     serialization();

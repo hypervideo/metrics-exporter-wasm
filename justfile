@@ -1,26 +1,22 @@
 default:
     just --list
 
-build-wasm:
+build:
     cargo build --release --target wasm32-unknown-unknown
     wasm-bindgen --target web --out-dir dist ./target/wasm32-unknown-unknown/release/metrics_exporter_wasm.wasm
+    wasm-opt -O4 ./dist/metrics_exporter_wasm_bg.wasm -o ./dist/metrics_exporter_wasm_bg.optimized.wasm
 
-build-wasm-debug:
-    rm -rf ./dist
-    CARGOcargo build --target wasm32-unknown-unknown
-    wasm-bindgen --target web --out-dir dist ./target/wasm32-unknown-unknown/debug/metrics_exporter_wasm.wasm
+build-debug:
+    cargo build --target wasm32-unknown-unknown
 
-serve-live: build-wasm
-    concurrently --kill-others \
-      "fd -e rs | entr just build-wasm" \
-      "live-server --no-browser"
+print-wasm-size: build
+    du -b ./dist/*.wasm | numfmt --to=iec-i --format="%3.5f"
 
-serve: build-wasm
-    concurrently --kill-others \
-      "fd -e rs | entr just build-wasm" \
-      "http-server"
+build-example:
+    cd examples/metrics-exporter-wasm-example && just build
 
-NAME := "asn1-eval"
+serve-example:
+    cd examples/metrics-exporter-wasm-example && just dev
 
-print-wasm-size: build-wasm
-    du -b ./target/wasm32-unknown-unknown/release/*.wasm | numfmt --to=iec-i --format="%3.5f"
+serve-example-release:
+    cd examples/metrics-exporter-wasm-example && just serve
