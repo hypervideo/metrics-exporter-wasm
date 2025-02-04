@@ -1,5 +1,3 @@
-#![allow(unused_variables)]
-
 use crate::{
     Event,
     MetricOperation,
@@ -241,14 +239,7 @@ impl HistogramFn for Handle {
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, buffer_size: Option<usize>) {
-    // let buffer_limit = buffer_size.unwrap_or(std::usize::MAX);
-    // // let mut events = crate::types::asn1::Events::with_capacity(1024);
-    // let mut clients = std::collections::HashMap::new();
-    // let mut clients_to_remove = Vec::new();
-    // let mut metadata = std::collections::HashMap::new();
-    // let mut buffered_pmsgs = std::collections::VecDeque::with_capacity(buffer_limit);
-
+async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, _buffer_size: Option<usize>) {
     debug!("starting metrics transport");
 
     state.increment_clients();
