@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["examples/metrics-exporter-wasm-example"]
+members = ["examples/standalone-client"]
 exclude = []
 
 [workspace.package]
@@ -44,6 +44,7 @@ crossbeam-channel.workspace = true
 metrics.workspace = true
 portable-atomic.workspace = true
 serde.workspace = true
+tokio = { version = "1.43.0", features = ["sync"] }
 tracing = "0.1.41"
 wasm-bindgen-futures.workspace = true
 

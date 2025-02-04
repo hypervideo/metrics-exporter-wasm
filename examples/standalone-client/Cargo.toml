@@ -20,3 +20,6 @@ tracing = { version = "0.1.0", default-features = false, features = ["attributes
 tracing-subscriber = "0.3.18"
 wasm-bindgen = { version = "0.2.100", default-features = false }
 wasm-tracing = { git = "https://github.com/hypervideo/wasm-tracing", rev = "351a117449b51cdbf2b7c51386fe999a37a7efe7" }
+
+[package.metadata.wasm-pack.profile.dev.wasm-bindgen]
+dwarf-debug-info = true

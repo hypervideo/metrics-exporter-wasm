@@ -46,6 +46,7 @@
             rust-analyzer
 
             wasm-bindgen-cli
+            symbolicator # for wasm-split
             binaryen
             wabt
             entr

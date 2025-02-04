@@ -10,11 +10,11 @@ use std::sync::{
     Arc,
 };
 
-use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 #[cfg(target_pointer_width = "32")]
 pub use portable_atomic::AtomicU64;
 #[cfg(not(target_pointer_width = "32"))]
 pub use std::sync::atomic::AtomicU64;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use crate::types::{Event, MetricOperation, MetricType};
 
@@ -58,19 +58,38 @@ impl State {
         unit: Option<Unit>,
         description: SharedString,
     ) {
-        let _ = self.tx.try_send(Event::Metadata {
-            name: key_name,
-            metric_type,
-            unit,
-            description,
+        trace!(
+            ?key_name,
+            ?metric_type,
+            ?unit,
+            ?description,
+            "registering metric"
+        );
+        let tx = self.tx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let _ = tx
+                .send(Event::Metadata {
+                    name: key_name,
+                    metric_type,
+                    unit,
+                    description,
+                })
+                .await;
         });
     }
 
     fn push_metric(&self, key: &Key, op: MetricOperation) {
+        trace!(?key, ?op, should_send = %self.should_send(), "pushing metric");
+        let tx = self.tx.clone();
+        let key = key.clone();
         if self.should_send() {
-            let _ = self.tx.try_send(Event::Metric {
-                key: key.clone(),
-                op,
+            wasm_bindgen_futures::spawn_local(async move {
+                let _ = tx
+                    .send(Event::Metric {
+                        key: key.clone(),
+                        op,
+                    })
+                    .await;
             });
         }
     }
@@ -85,23 +104,22 @@ pub struct WasmRecorderBuilder {
 impl WasmRecorderBuilder {
     pub fn build(self) -> Result<WasmRecorder, SetRecorderError<WasmRecorder>> {
         let (tx, rx) = if let Some(size) = self.buffer_size {
-            bounded(size)
+            channel(size)
         } else {
-            unbounded()
+            channel(42)
         };
 
+        let state = Arc::new(State::new(tx.clone()));
+
         wasm_bindgen_futures::spawn_local({
-            let state = Arc::new(State::new(tx.clone()));
+            let state = state.clone();
             let buffer_size = self.buffer_size;
             async move {
-                run_transport(rx, state, buffer_size);
+                run_transport(rx, state, buffer_size).await;
             }
         });
 
-        Ok(WasmRecorder {
-            state: Arc::new(State::new(tx)),
-            handle: None,
-        })
+        Ok(WasmRecorder { state })
     }
 
     pub fn install(self) -> Result<(), SetRecorderError<WasmRecorder>> {
@@ -116,7 +134,6 @@ impl WasmRecorderBuilder {
 
 pub struct WasmRecorder {
     state: Arc<State>,
-    handle: Option<Handle>,
 }
 
 impl WasmRecorder {
@@ -209,7 +226,7 @@ impl HistogramFn for Handle {
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-fn run_transport(rx: Receiver<Event>, state: Arc<State>, buffer_size: Option<usize>) {
+async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, buffer_size: Option<usize>) {
     // let buffer_limit = buffer_size.unwrap_or(std::usize::MAX);
     // // let mut events = crate::types::asn1::Events::with_capacity(1024);
     // let mut clients = std::collections::HashMap::new();
@@ -219,14 +236,18 @@ fn run_transport(rx: Receiver<Event>, state: Arc<State>, buffer_size: Option<usi
 
     debug!("starting metrics transport");
 
+    state.increment_clients();
+
     loop {
-        let Ok(event) = rx.recv() else {
+        let Some(event) = rx.recv().await else {
             debug!("metrics transport lost all senders");
             break;
         };
 
         info!(?event, "received metrics event");
     }
+
+    state.decrement_clients();
 
     debug!("metrics transport stopped");
 }

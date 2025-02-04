@@ -13,10 +13,10 @@ print-wasm-size: build
     du -b ./dist/*.wasm | numfmt --to=iec-i --format="%3.5f"
 
 build-example:
-    cd examples/metrics-exporter-wasm-example && just build
+    cd examples/standalone-client && just build
 
 serve-example:
-    cd examples/metrics-exporter-wasm-example && just dev
+    cd examples/standalone-client && just dev
 
 serve-example-release:
-    cd examples/metrics-exporter-wasm-example && just serve
+    cd examples/standalone-client && just serve
