@@ -1,6 +1,8 @@
 default:
     just --list
 
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 build:
     cargo build --release --target wasm32-unknown-unknown
     wasm-bindgen --target web --out-dir dist ./target/wasm32-unknown-unknown/release/metrics_exporter_wasm.wasm
@@ -12,6 +14,8 @@ build-debug:
 print-wasm-size: build
     du -b ./dist/*.wasm | numfmt --to=iec-i --format="%3.5f"
 
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
 build-example:
     cd examples/standalone-client && just build
 
@@ -20,3 +24,9 @@ serve-example:
 
 serve-example-release:
     cd examples/standalone-client && just serve
+
+# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+release *args="":
+    cargo rdme
+    cargo release {{ args }}

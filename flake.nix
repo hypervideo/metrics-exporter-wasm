@@ -40,6 +40,7 @@
 
           packages = with pkgs; [
             cargo-criterion
+            cargo-rdme
             cargo-nextest
             wabt
             rust-analyzer
