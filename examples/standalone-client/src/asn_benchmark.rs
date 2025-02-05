@@ -1,4 +1,3 @@
-use crate::log;
 use metrics_exporter_wasm::{
     Event,
     Events,
@@ -22,7 +21,7 @@ fn serialization() {
                 .serialize_with_asn1rs()
                 .expect("failed to serialize events")
         });
-        log!("| asn1rs serialize {i} | {result}");
+        tracing::info!("| asn1rs serialize {i} | {result}");
     }
 }
 
@@ -35,7 +34,7 @@ fn deserialization() {
             let result = bench_env(data, move |data| {
                 Events::deserialize_with_asn1rs(&data).expect("failed to serialize data")
             });
-            log!("| asn1rs serialize {i} | {result}");
+            tracing::info!("| asn1rs serialize {i} | {result}");
         }
     }
 }

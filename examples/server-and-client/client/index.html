@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <title>metrics-exporter-wasm example</title>
     <style>
       body {
@@ -23,7 +24,7 @@
     </div>
 
     <script type="module">
-        import init, { setup, run_asn_benchmark, setup_metrics_test, run_metrics_test } from './dist/standalone_client.js';
+        import init, { setup, run_asn_benchmark, setup_metrics_test, run_metrics_test } from './dist/metrics_exporter_wasm_example.js';
         async function start() {
             await init();
             setup();

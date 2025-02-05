@@ -48,10 +48,10 @@ BEGIN
         -- One microsecond is equal to 1000 nanoseconds
         microseconds,
         nanoseconds,
-        -- One tebibyte is equal to 1024 gigibytes
+        -- One tebibyte is equal to 1024 gibibytes
         tebibytes,
-        -- One gigibyte is equal to 1024 mebibytes
-        gigibytes,
+        -- One gibibyte is equal to 1024 mebibytes
+        gibibytes,
         -- One mebibyte is equal to 1024 kibibytes
         mebibytes,
         -- One kibibyte is equal to 1024 bytes

@@ -83,17 +83,14 @@ fn percentile(data: &[f64], p: f64) -> f64 {
 }
 
 /// High-precision time in milliseconds
-#[cfg(target_arch = "wasm32")]
 fn now() -> f64 {
-    gloo::utils::window().performance().unwrap().now()
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn now() -> f64 {
-    use std::{
-        sync::LazyLock,
-        time::Instant,
-    };
-    static START: LazyLock<Instant> = LazyLock::new(Instant::now);
-    (Instant::now() - *START).as_secs_f64() * 1000.0
+    mod performance {
+        use wasm_bindgen::prelude::*;
+        #[wasm_bindgen]
+        extern "C" {
+            #[wasm_bindgen(js_namespace = performance)]
+            pub fn now() -> f64;
+        }
+    }
+    performance::now()
 }

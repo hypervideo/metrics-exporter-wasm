@@ -1,0 +1,11 @@
+default:
+    just --list
+
+build-client:
+    cd client && just build
+
+build-client-release:
+    cd client && just build-release
+
+serve *args="": build-client
+    cargo run -p server -- {{ args }}

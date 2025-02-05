@@ -1,4 +1,3 @@
-use super::log;
 use metrics_exporter_wasm::WasmRecorder;
 use metrics_util::layers::FanoutBuilder;
 use std::sync::OnceLock;
@@ -21,7 +20,7 @@ pub fn setup() {
 
     metrics::set_global_recorder(recorder).expect("failed to set global recorder");
 
-    log!("metrics setup complete");
+    tracing::info!("metrics setup complete");
 }
 
 #[wasm_bindgen(js_name = run_metrics_test)]
@@ -33,7 +32,7 @@ pub fn run() {
     let snapshotter = SNAPSHOTTER.get().expect("snapshotter not set");
     let snapshot = snapshotter.snapshot().into_vec();
 
-    log!("metrics test complete {snapshot:?}");
+    tracing::info!("metrics test complete {snapshot:?}");
 }
 
 pub fn do_something() {

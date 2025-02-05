@@ -1,0 +1,26 @@
+BASE_NAME := "client"
+BASE_FILE_NAME := snakecase(BASE_NAME)
+WASM_FILE_NAME := BASE_NAME + ".wasm"
+WASM_BINDGEN_FILE_NAME := BASE_NAME + "_bg.wasm"
+WASM_BINDGEN_DEBUG_FILE_NAME := BASE_NAME + "_bg.debug.wasm"
+
+export WASM_TRACING_BASE_URL := "file://" + canonicalize(justfile_directory() / "..") + "/"
+
+CURRENT_DIR := canonicalize(justfile_directory())
+ROOT_DIR := canonicalize(CURRENT_DIR / "../../..")
+DIST_DIR := justfile_directory() / "../dist"
+
+default:
+    just --list
+
+build:
+    cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown
+    rm -rf {{ DIST_DIR }}
+    wasm-bindgen --target web --keep-debug --out-dir {{ DIST_DIR }} {{ ROOT_DIR }}/target/wasm32-unknown-unknown/debug/{{ WASM_FILE_NAME }}
+    wasm-split {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }} -d {{ DIST_DIR }}/{{ WASM_BINDGEN_DEBUG_FILE_NAME }} --strip
+
+build-release:
+    cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown --release
+    rm -rf {{ DIST_DIR }}
+    wasm-bindgen --target web --out-dir dist {{ ROOT_DIR }}/target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
+    wasm-opt -O4 {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }} -o {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }}

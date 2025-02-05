@@ -8,23 +8,8 @@ pub use metrics_test::{
 };
 use wasm_bindgen::prelude::*;
 
-#[cfg(target_arch = "wasm32")]
-#[macro_export]
-macro_rules! log {
-    // Note that this is using the `log` function imported above during
-    // `bare_bones`
-    ($($t:tt)*) => (gloo::console::log!(&format_args!($($t)*).to_string()))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-#[macro_export]
-macro_rules! log {
-    ($($t:tt)*) => (println!($($t)*))
-}
-
 #[wasm_bindgen]
 pub fn setup() {
-    color_eyre::install().expect("color_eyre init");
     console_error_panic_hook::set_once();
 
     // Register tracing subscriber.
@@ -38,7 +23,7 @@ pub fn setup() {
         wasm_tracing::set_as_global_default_with_config(config).expect("Failed to set as global default");
     }
 
-    log!("tracing setup complete");
+    tracing::info!("tracing setup complete");
 }
 
 #[wasm_bindgen]

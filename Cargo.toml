@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
-members = ["examples/standalone-client"]
+members = [
+  "examples/server-and-client/client",
+  "examples/server-and-client/server",
+  "examples/standalone-client",
+]
 exclude = []
 
 [workspace.package]
@@ -10,11 +14,27 @@ edition = "2021"
 repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
-crossbeam-channel = { version = "0.5.14", features = ["std"] }
-metrics = { version = "0.23.0" }
+axum = "0.8.1"
+axum-prometheus = "0.8.0"
+color-eyre = "0.6.3"
+console_error_panic_hook = "0.1.7"
+eyre = "0.6.12"
+futures = "0.3.31"
+hyper = "1.6.0"
+metrics = { version = "0.24.1" }
+metrics-exporter-wasm.path = "."
+metrics-util = "0.19.0"
 portable-atomic = { version = "1.7.0", default-features = false, features = ["fallback"] }
 serde = { version = "1.0.209", features = ["derive"] }
+serde_json = "1.0.138"
+tokio = { version = "1.43.0", features = ["signal"] }
+tower = "0.5.2"
+tower-http = "0.6.2"
+tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
+tracing-subscriber = "0.3.18"
+wasm-bindgen = { version = "0.2.100", default-features = false }
 wasm-bindgen-futures = "0.4.49"
+wasm-tracing = { git = "https://github.com/hypervideo/wasm-tracing", rev = "351a117449b51cdbf2b7c51386fe999a37a7efe7" }
 
 [workspace.dependencies.asn1rs]
 git = "https://github.com/hypervideo/asn1rs"
@@ -27,7 +47,7 @@ version = "0.3.76"
 features = ["Performance", "PerformanceEntry", "PerformanceMark", "PerformanceMeasure", "Document", "Window"]
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+# root
 
 [package]
 name = "metrics-exporter-wasm"
@@ -40,7 +60,6 @@ description = "A metrics-compatible exporter meant for browser WASM applications
 
 [dependencies]
 asn1rs.workspace = true
-crossbeam-channel.workspace = true
 metrics.workspace = true
 portable-atomic.workspace = true
 serde.workspace = true

@@ -16,14 +16,17 @@ print-wasm-size: build
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-build-example:
+example-1-build:
     cd examples/standalone-client && just build
 
-serve-example:
+example-1-serve:
     cd examples/standalone-client && just dev
 
-serve-example-release:
+example-1-serve-release:
     cd examples/standalone-client && just serve
+
+example-2-serve:
+    cd examples/server-and-client && just serve
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
