@@ -1,7 +1,8 @@
-BASE_NAME := "metrics_exporter_wasm_example"
-WASM_FILE_NAME := BASE_NAME + ".wasm"
-WASM_BINDGEN_FILE_NAME := BASE_NAME + "_bg.wasm"
-WASM_BINDGEN_DEBUG_FILE_NAME := BASE_NAME + "_bg.debug.wasm"
+BASE_NAME := "standalone-client"
+BASE_FILE_NAME := snakecase(BASE_NAME)
+WASM_FILE_NAME := BASE_FILE_NAME + ".wasm"
+WASM_BINDGEN_FILE_NAME := BASE_FILE_NAME + "_bg.wasm"
+WASM_BINDGEN_DEBUG_FILE_NAME := BASE_FILE_NAME + "_bg.debug.wasm"
 
 export WASM_TRACING_BASE_URL := "file://" + canonicalize(justfile_directory() / "..") + "/"
 
@@ -11,13 +12,13 @@ default:
     just --list
 
 build:
-    cargo build -p metrics-exporter-wasm-example --target wasm32-unknown-unknown
+    cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown
     rm -rf ./dist
     wasm-bindgen --target web --keep-debug --out-dir dist ../../target/wasm32-unknown-unknown/debug/{{ WASM_FILE_NAME }}
     wasm-split ./dist/{{ WASM_BINDGEN_FILE_NAME }} -d ./dist/{{ WASM_BINDGEN_DEBUG_FILE_NAME }} --strip
 
 build-release:
-    cargo build -p metrics-exporter-wasm-example --target wasm32-unknown-unknown --release
+    cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown --release
     rm -rf ./dist
     wasm-bindgen --target web --out-dir dist ../../target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
     wasm-opt -O4 ./dist/{{ WASM_BINDGEN_FILE_NAME }} -o ./dist/{{ WASM_BINDGEN_FILE_NAME }}

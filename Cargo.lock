@@ -657,24 +657,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "metrics-exporter-wasm-example"
-version = "0.1.0"
-dependencies = [
- "color-eyre",
- "console_error_panic_hook",
- "crossbeam-channel",
- "eyre",
- "gloo",
- "metrics",
- "metrics-exporter-wasm",
- "metrics-util",
- "tracing",
- "tracing-subscriber",
- "wasm-bindgen",
- "wasm-tracing",
-]
-
-[[package]]
 name = "metrics-util"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1045,6 +1027,24 @@ name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+
+[[package]]
+name = "standalone-client"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "console_error_panic_hook",
+ "crossbeam-channel",
+ "eyre",
+ "gloo",
+ "metrics",
+ "metrics-exporter-wasm",
+ "metrics-util",
+ "tracing",
+ "tracing-subscriber",
+ "wasm-bindgen",
+ "wasm-tracing",
+]
 
 [[package]]
 name = "strum"

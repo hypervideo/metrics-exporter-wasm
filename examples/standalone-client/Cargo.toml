@@ -1,8 +1,9 @@
 [package]
-name = "metrics-exporter-wasm-example"
+name = "standalone-client"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]

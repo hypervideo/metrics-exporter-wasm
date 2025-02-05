@@ -23,7 +23,7 @@
     </div>
 
     <script type="module">
-        import init, { setup, run_asn_benchmark, setup_metrics_test, run_metrics_test } from './dist/metrics_exporter_wasm_example.js';
+        import init, { setup, run_asn_benchmark, setup_metrics_test, run_metrics_test } from './dist/standalone-client.js';
         async function start() {
             await init();
             setup();
