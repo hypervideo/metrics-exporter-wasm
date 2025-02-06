@@ -153,7 +153,7 @@ impl WasmRecorderBuilder<EndpointDefined> {
     }
 
     /// Create a new builder for a [`WasmRecorder`].
-    pub fn build(self) -> Result<WasmRecorder, SetRecorderError<WasmRecorder>> {
+    pub fn build(self) -> Result<WasmHttpRecorder, SetRecorderError<WasmHttpRecorder>> {
         let Self {
             buffer_size,
             send_frequency,
@@ -171,21 +171,21 @@ impl WasmRecorderBuilder<EndpointDefined> {
             }
         });
 
-        Ok(WasmRecorder { state })
+        Ok(WasmHttpRecorder { state })
     }
 
     /// Install this recorder as the global recorder.
-    pub fn install(self) -> Result<(), SetRecorderError<WasmRecorder>> {
+    pub fn install(self) -> Result<(), SetRecorderError<WasmHttpRecorder>> {
         self.build()?.install()
     }
 }
 
 /// A metrics recorder for use in WASM environments.
-pub struct WasmRecorder {
+pub struct WasmHttpRecorder {
     state: Arc<State>,
 }
 
-impl WasmRecorder {
+impl WasmHttpRecorder {
     /// Create a new builder for a [`WasmRecorder`].
     pub fn builder() -> WasmRecorderBuilder<EndpointUndefined> {
         WasmRecorderBuilder {
@@ -201,7 +201,7 @@ impl WasmRecorder {
     }
 }
 
-impl Recorder for WasmRecorder {
+impl Recorder for WasmHttpRecorder {
     fn describe_counter(&self, key: KeyName, unit: Option<Unit>, description: SharedString) {
         self.state.register_metric(key, MetricType::Counter, unit, description);
     }

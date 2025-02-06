@@ -10,7 +10,7 @@
 //!   encode the metrics into a space efficient binary format. The encoded metrics are then batched and send with POST
 //!   requests to the specified server URL.
 
-mod recorder;
+mod wasm_http_recorder;
 
 pub use metrics_exporter_wasm_core::{
     Event,
@@ -18,8 +18,8 @@ pub use metrics_exporter_wasm_core::{
     MetricOperation,
     MetricType,
 };
-pub use recorder::{
-    WasmRecorder,
+pub use wasm_http_recorder::{
+    WasmHttpRecorder,
     WasmRecorderBuilder,
 };
 

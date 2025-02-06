@@ -1,4 +1,4 @@
-use metrics_exporter_wasm::WasmRecorder;
+use metrics_exporter_wasm::WasmHttpRecorder;
 use metrics_util::layers::FanoutBuilder;
 use std::{
     sync::OnceLock,
@@ -14,7 +14,7 @@ pub fn setup(endpoint: &str) {
     let snapshotter = debugging_recorder.snapshotter();
     let _ = SNAPSHOTTER.set(snapshotter);
 
-    let wasm_recorder = WasmRecorder::builder()
+    let wasm_recorder = WasmHttpRecorder::builder()
         .endpoint(endpoint.to_string())
         .send_frequency(Duration::from_secs(5))
         .build()
