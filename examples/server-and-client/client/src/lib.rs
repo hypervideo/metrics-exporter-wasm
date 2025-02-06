@@ -39,6 +39,8 @@ pub async fn run() {
 
 pub async fn do_something(i: i64) {
     let labels = [("i", format!("{}!", i))];
+
+    metrics::describe_counter!("invocations", metrics::Unit::Count, "counting invocations");
     metrics::counter!("invocations", &labels).increment(1);
 
     gloo::timers::future::sleep(std::time::Duration::from_millis(100)).await;
