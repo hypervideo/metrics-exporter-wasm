@@ -1,6 +1,9 @@
 use metrics_exporter_wasm::WasmRecorder;
 use metrics_util::layers::FanoutBuilder;
-use std::sync::OnceLock;
+use std::{
+    sync::OnceLock,
+    time::Duration,
+};
 use wasm_bindgen::prelude::*;
 
 static SNAPSHOTTER: OnceLock<metrics_util::debugging::Snapshotter> = OnceLock::new();
@@ -13,6 +16,7 @@ pub fn setup(endpoint: &str) {
 
     let wasm_recorder = WasmRecorder::builder()
         .endpoint(endpoint.to_string())
+        .send_frequency(Duration::from_secs(5))
         .build()
         .expect("failed to install recorder");
 

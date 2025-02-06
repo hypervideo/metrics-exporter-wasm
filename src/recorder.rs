@@ -24,6 +24,7 @@ pub use portable_atomic::AtomicU64;
 #[cfg(not(target_pointer_width = "32"))]
 pub use std::sync::atomic::AtomicU64;
 use std::{
+    collections::VecDeque,
     sync::{
         atomic::{
             AtomicBool,
@@ -33,10 +34,10 @@ use std::{
     },
     time::Duration,
 };
-use tokio::sync::mpsc::{
-    channel,
-    Receiver,
-    Sender,
+use tokio::sync::mpsc;
+use wasmtimer::{
+    std::Instant,
+    tokio::sleep,
 };
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -48,11 +49,11 @@ use tokio::sync::mpsc::{
 struct State {
     client_count: AtomicU64,
     should_send: AtomicBool,
-    tx: Sender<Event>,
+    tx: mpsc::UnboundedSender<Event>,
 }
 
 impl State {
-    fn new(tx: Sender<Event>) -> State {
+    fn new(tx: mpsc::UnboundedSender<Event>) -> State {
         State {
             client_count: AtomicU64::new(0),
             should_send: AtomicBool::new(false),
@@ -85,15 +86,11 @@ impl State {
     ) {
         trace!(?key_name, ?metric_type, ?unit, ?description, "registering metric");
         let tx = self.tx.clone();
-        wasm_bindgen_futures::spawn_local(async move {
-            let _ = tx
-                .send(Event::Metadata {
-                    name: key_name,
-                    metric_type,
-                    unit,
-                    description,
-                })
-                .await;
+        let _ = tx.send(Event::Metadata {
+            name: key_name,
+            metric_type,
+            unit,
+            description,
         });
     }
 
@@ -102,9 +99,7 @@ impl State {
         let tx = self.tx.clone();
         let key = key.clone();
         if self.should_send() {
-            wasm_bindgen_futures::spawn_local(async move {
-                let _ = tx.send(Event::Metric { key: key.clone(), op }).await;
-            });
+            let _ = tx.send(Event::Metric { key: key.clone(), op });
         }
     }
 }
@@ -117,6 +112,7 @@ pub struct EndpointDefined(String);
 /// A builder for a [`WasmRecorder`].
 pub struct WasmRecorderBuilder<T> {
     buffer_size: Option<usize>,
+    send_frequency: Duration,
     endpoint: T,
 }
 
@@ -127,10 +123,17 @@ impl WasmRecorderBuilder<EndpointUndefined> {
         self
     }
 
+    /// Set the frequency at which metrics are sent to the transport.
+    pub fn send_frequency(mut self, frequency: Duration) -> Self {
+        self.send_frequency = frequency;
+        self
+    }
+
     /// Set the endpoint for the metrics transport.
     pub fn endpoint(self, endpoint: impl ToString) -> WasmRecorderBuilder<EndpointDefined> {
         WasmRecorderBuilder {
             buffer_size: self.buffer_size,
+            send_frequency: self.send_frequency,
             endpoint: EndpointDefined(endpoint.to_string()),
         }
     }
@@ -143,26 +146,28 @@ impl WasmRecorderBuilder<EndpointDefined> {
         self
     }
 
+    /// Set the frequency at which metrics are sent to the transport.
+    pub fn send_frequency(mut self, frequency: Duration) -> Self {
+        self.send_frequency = frequency;
+        self
+    }
+
     /// Create a new builder for a [`WasmRecorder`].
     pub fn build(self) -> Result<WasmRecorder, SetRecorderError<WasmRecorder>> {
         let Self {
-            buffer_size: _,
+            buffer_size,
+            send_frequency,
             endpoint: EndpointDefined(endpoint),
         } = self;
 
-        let (tx, rx) = if let Some(size) = self.buffer_size {
-            channel(size)
-        } else {
-            channel(42)
-        };
+        let (tx, rx) = mpsc::unbounded_channel();
 
         let state = Arc::new(State::new(tx.clone()));
 
         wasm_bindgen_futures::spawn_local({
             let state = state.clone();
-            let buffer_size = self.buffer_size;
             async move {
-                run_transport(rx, state, endpoint, buffer_size).await;
+                run_transport(rx, state, endpoint, buffer_size, send_frequency).await;
             }
         });
 
@@ -185,6 +190,7 @@ impl WasmRecorder {
     pub fn builder() -> WasmRecorderBuilder<EndpointUndefined> {
         WasmRecorderBuilder {
             buffer_size: None,
+            send_frequency: Duration::from_secs(15),
             endpoint: EndpointUndefined,
         }
     }
@@ -271,30 +277,103 @@ impl HistogramFn for Handle {
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, endpoint: String, _buffer_size: Option<usize>) {
+async fn run_transport(
+    mut rx: mpsc::UnboundedReceiver<Event>,
+    state: Arc<State>,
+    endpoint: String,
+    buffer_size: Option<usize>,
+    send_frequency: Duration,
+) {
+    use backoff::backoff::Backoff as _;
+
     debug!("starting metrics transport");
 
     state.increment_clients();
+    defer! {
+        state.decrement_clients();
+    }
 
-    loop {
-        let Some(event) = rx.recv().await else {
-            debug!("metrics transport lost all senders");
-            break;
-        };
-
-        info!(?event, "received metrics event");
-
-        if let Err(err) = post_metrics(Duration::from_secs(5), vec![event].into(), &endpoint).await {
-            error!(?err, "failed to send metrics");
+    // Initial connection, send internal metadata
+    {
+        let mut backoff = backoff::ExponentialBackoff::default();
+        while let Err(err) = post_metrics(
+            Duration::from_secs(5),
+            &vec![Event::Metadata {
+                name: KeyName::from_const_str("metrics_processed"),
+                metric_type: MetricType::Counter,
+                unit: None,
+                description: "metrics-exporter-wasm internal counter".into(),
+            }]
+            .into(),
+            &endpoint,
+        )
+        .await
+        {
+            error!(?err, "failed to send initial metadata");
+            if let Some(backoff) = backoff.next_backoff() {
+                sleep(backoff).await;
+            }
         }
     }
 
-    state.decrement_clients();
+    // Time-batched metrics transport
+    let mut time_to_send: Option<wasmtimer::tokio::Sleep> = None;
+    let mut events = VecDeque::new();
+    let mut last_warning = None::<Instant>;
 
-    debug!("metrics transport stopped");
+    loop {
+        tokio::select! {
+            _ = async {
+                if let Some(time_to_send) = &mut time_to_send {
+                    time_to_send.await;
+                } else {
+                    std::future::pending::<()>().await;
+                }
+
+            } => {
+                let n = events.len();
+                trace!(%n, "sending metrics");
+                time_to_send = None;
+                events.push_back(Event::Metric { key: Key::from_static_name("metrics_processed"), op: MetricOperation::IncrementCounter(events.len() as _) });
+
+                let mut backoff = backoff::ExponentialBackoffBuilder::new()
+                    .with_max_elapsed_time(Some(Duration::from_secs(60)))
+                    .build();
+                let events: Events = events.drain(..).collect::<Vec::<_>>().into();
+                loop {
+                    match post_metrics(Duration::from_secs(5), &events, &endpoint).await {
+                        Ok(_) => break,
+                        Err(err) => {
+                            if let Some(backoff) = backoff.next_backoff() {
+                                warn!(?err, "failed to send metrics, retrying in {backoff:?}");
+                                sleep(backoff).await;
+                            } else {
+                                error!(?err, "failed to send metrics, giving up and loosing {n} metrics");
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            Some(event) = rx.recv() => {
+                if buffer_size.is_some_and(|buffer_size| events.len() >= buffer_size) {
+                    if last_warning.is_none_or(|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
+                        warn!("metrics buffer size exceeded, dropping metrics");
+                        last_warning = Some(Instant::now());
+                    }
+                    events.pop_front();
+                };
+                events.push_back(event);
+                if time_to_send.is_none() {
+                    time_to_send = Some(sleep(send_frequency));
+                }
+            }
+        }
+    }
 }
 
-async fn post_metrics(timeout: Duration, events: Events, endpoint: &str) -> std::io::Result<()> {
+async fn post_metrics(timeout: Duration, events: &Events, endpoint: &str) -> std::io::Result<()> {
     use gloo::net::http::{
         Headers,
         Method,
@@ -348,10 +427,9 @@ async fn post_metrics(timeout: Duration, events: Events, endpoint: &str) -> std:
         Ok(())
     };
 
-    let fut = std::pin::pin!(fut);
-    match futures::future::select(fut, gloo::timers::future::sleep(timeout)).await {
-        futures::future::Either::Left((res, _)) => res,
-        futures::future::Either::Right(_) => {
+    tokio::select! {
+        res = fut => res,
+        _ = wasmtimer::tokio::sleep(timeout) => {
             controller.abort();
             Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Timed out"))
         }

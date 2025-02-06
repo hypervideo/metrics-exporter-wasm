@@ -21,6 +21,7 @@ color-eyre = "0.6.3"
 console_error_panic_hook = "0.1.7"
 eyre = "0.6.12"
 futures = "0.3.31"
+gloo = { version = "0.11.0", default-features = false }
 hyper = "1.6.0"
 metrics = { version = "0.24.1" }
 metrics-exporter-wasm.path = "."
@@ -61,14 +62,16 @@ description = "A metrics-compatible exporter meant for browser WASM applications
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+backoff = { version = "0.4.0", features = ["wasm-bindgen", "futures"] }
 brotli = "7.0.0"
 futures.workspace = true
-gloo = { version = "0.11.0", default-features = false, features = ["net", "timers", "futures"] }
+gloo = { workspace = true, features = ["net"] }
 metrics.workspace = true
 metrics-exporter-wasm-core.workspace = true
 portable-atomic.workspace = true
+scopeguard = "1.2.0"
 serde.workspace = true
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["sync", "macros"] }
 tracing.workspace = true
 wasm-bindgen-futures.workspace = true
 wasmtimer = "0.4.1"

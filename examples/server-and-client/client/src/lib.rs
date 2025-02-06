@@ -1,4 +1,5 @@
 use metrics_exporter_wasm::WasmRecorder;
+use std::time::Duration;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -18,6 +19,7 @@ pub fn setup(endpoint: &str) {
 
     let recorder = WasmRecorder::builder()
         .endpoint(endpoint.to_string())
+        .send_frequency(Duration::from_secs(5))
         .build()
         .expect("failed to create recorder");
 
@@ -36,12 +38,8 @@ pub async fn run() {
 }
 
 pub async fn do_something(i: i64) {
-    if i % 2 == 0 {
-        // metrics::counter!("invocations").increment(1);
-    } else {
-        let labels = [("i", format!("{}!", i))];
-        metrics::counter!("invocations", &labels).increment(1);
-    };
+    let labels = [("i", format!("{}!", i))];
+    metrics::counter!("invocations", &labels).increment(1);
 
     gloo::timers::future::sleep(std::time::Duration::from_millis(100)).await;
 }

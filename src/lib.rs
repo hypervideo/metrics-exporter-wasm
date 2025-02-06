@@ -25,3 +25,6 @@ pub use recorder::{
 
 #[macro_use]
 extern crate tracing;
+
+#[macro_use]
+extern crate scopeguard;

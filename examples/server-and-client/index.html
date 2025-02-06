@@ -18,14 +18,17 @@
 <body>
     <h1>metrics-exporter-wasm</h1>
 
+    <button onclick="window.run()">Run</button>
+
     <script type="module">
         import init, { setup, run } from './dist/client.js';
         async function start() {
             await init();
             setup("/receive-metrics");
-            run();
         }
         start();
+
+        window.run = run;
     </script>
 </body>
 </html>
