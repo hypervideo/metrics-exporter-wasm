@@ -28,17 +28,20 @@ pub fn setup(endpoint: &str) {
 
 #[wasm_bindgen]
 pub async fn run() {
-    for _ in 0..10 {
-        do_something().await;
+    for i in 0..10 {
+        do_something(i).await;
     }
 
     tracing::info!("metrics test complete");
 }
 
-pub async fn do_something() {
-    // let labels = [("i", format!("{}!", i))];
-    // metrics::counter!("invocations", &labels).increment(1);
+pub async fn do_something(i: i64) {
+    if i % 2 == 0 {
+        // metrics::counter!("invocations").increment(1);
+    } else {
+        let labels = [("i", format!("{}!", i))];
+        metrics::counter!("invocations", &labels).increment(1);
+    };
 
-    metrics::counter!("invocations").increment(1);
     gloo::timers::future::sleep(std::time::Duration::from_millis(100)).await;
 }

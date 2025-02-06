@@ -284,7 +284,7 @@ async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, endpoint: Str
 
         info!(?event, "received metrics event");
 
-        if let Err(err) = post_metrics(Duration::from_secs(5), vec![event; 100].into(), &endpoint).await {
+        if let Err(err) = post_metrics(Duration::from_secs(5), vec![event].into(), &endpoint).await {
             error!(?err, "failed to send metrics");
         }
     }
@@ -296,6 +296,7 @@ async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, endpoint: Str
 
 async fn post_metrics(timeout: Duration, events: Events, endpoint: &str) -> std::io::Result<()> {
     use gloo::net::http::{
+        Headers,
         Method,
         RequestBuilder,
     };
@@ -310,19 +311,27 @@ async fn post_metrics(timeout: Duration, events: Events, endpoint: &str) -> std:
     let signal = controller.signal();
 
     let body = events.serialize_with_asn1rs().map_err(err)?;
+    let headers = Headers::new();
+    headers.set("content-type", "application/octet-stream");
 
-    let mut compressed = Vec::new();
-    {
-        let mut writer = brotli::CompressorWriter::new(&mut compressed, 4096, 11, 22);
-        writer.write_all(&body).map_err(err)?;
-    }
+    const COMPRESS: bool = true;
+    let body = if COMPRESS {
+        headers.set("Content-Encoding", "br");
+        let mut compressed = Vec::new();
+        {
+            let mut writer = brotli::CompressorWriter::new(&mut compressed, 4096, 11, 22);
+            writer.write_all(&body).map_err(err)?;
+        }
+        compressed
+    } else {
+        body
+    };
 
     let req = RequestBuilder::new(endpoint)
         .method(Method::POST)
-        .header("content-type", "application/octet-stream")
-        .header("content-encoding", "br")
+        .headers(headers)
         .abort_signal(Some(&signal))
-        .body(compressed)
+        .body(body)
         .map_err(err)?;
 
     let fut = async {

@@ -9,12 +9,16 @@ use axum::{
     },
     Router,
 };
+use metrics_exporter_wasm_core::{
+    Event,
+    Events,
+};
 use std::{
     net::SocketAddr,
     time::Duration,
 };
 use tower_http::{
-    decompression::DecompressionLayer,
+    decompression::RequestDecompressionLayer,
     services::ServeDir,
 };
 
@@ -42,8 +46,71 @@ async fn metrics() -> impl IntoResponse {
     }
 }
 
-async fn receive_metrics() -> impl IntoResponse {
-    hyper::StatusCode::OK
+async fn receive_metrics(data: axum::body::Bytes) -> hyper::StatusCode {
+    match Events::deserialize_with_asn1rs(&data) {
+        Ok(events) => {
+            let events: Vec<Event> = events.into();
+            for event in events {
+                dbg!(&event);
+                match event {
+                    Event::Metadata {
+                        name,
+                        metric_type,
+                        unit,
+                        description,
+                    } => match metric_type {
+                        metrics_exporter_wasm_core::MetricType::Counter => {
+                            metrics::with_recorder(|recorder| recorder.describe_counter(name, unit, description));
+                        }
+                        metrics_exporter_wasm_core::MetricType::Gauge => {
+                            metrics::with_recorder(|recorder| recorder.describe_gauge(name, unit, description));
+                        }
+                        metrics_exporter_wasm_core::MetricType::Histogram => {
+                            metrics::with_recorder(|recorder| recorder.describe_histogram(name, unit, description));
+                        }
+                    },
+                    Event::Metric { key, op } => {
+                        let metadata = {
+                            static METADATA: metrics::Metadata<'static> =
+                                metrics::Metadata::new("", metrics::Level::INFO, None);
+                            &METADATA
+                        };
+
+                        match op {
+                            metrics_exporter_wasm_core::MetricOperation::IncrementCounter(value) => {
+                                metrics::with_recorder(|recorder| recorder.register_counter(&key, metadata))
+                                    .increment(value);
+                            }
+                            metrics_exporter_wasm_core::MetricOperation::SetCounter(value) => {
+                                metrics::with_recorder(|recorder| recorder.register_counter(&key, metadata))
+                                    .absolute(value);
+                            }
+                            metrics_exporter_wasm_core::MetricOperation::IncrementGauge(value) => {
+                                metrics::with_recorder(|recorder| recorder.register_gauge(&key, metadata))
+                                    .increment(value);
+                            }
+                            metrics_exporter_wasm_core::MetricOperation::DecrementGauge(value) => {
+                                metrics::with_recorder(|recorder| recorder.register_gauge(&key, metadata))
+                                    .decrement(value);
+                            }
+                            metrics_exporter_wasm_core::MetricOperation::SetGauge(value) => {
+                                metrics::with_recorder(|recorder| recorder.register_gauge(&key, metadata)).set(value);
+                            }
+                            metrics_exporter_wasm_core::MetricOperation::RecordHistogram(value) => {
+                                metrics::with_recorder(|recorder| recorder.register_histogram(&key, metadata))
+                                    .record(value);
+                            }
+                        }
+                    }
+                }
+            }
+            hyper::StatusCode::OK
+        }
+        Err(e) => {
+            error!("failed to decode metrics: {:?}", e);
+            hyper::StatusCode::BAD_REQUEST
+        }
+    }
 }
 
 fn metrics_test() {
@@ -75,7 +142,7 @@ async fn main() {
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    let decomression_layer: DecompressionLayer = DecompressionLayer::new().br(true).deflate(true).gzip(true).zstd(true);
+    let decompression_layer = RequestDecompressionLayer::new().br(true);
 
     let app = Router::<()>::new()
         .route("/fast", get(|| async {}))
@@ -87,8 +154,8 @@ async fn main() {
         )
         .route("/metrics", get(metrics))
         .route("/receive-metrics", post(receive_metrics))
-        .fallback_service(ServeDir::new(".").append_index_html_on_directories(true))
-        .layer(decomression_layer);
+        .layer(decompression_layer)
+        .fallback_service(ServeDir::new(".").append_index_html_on_directories(true));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     info!("starting on {:?}", addr);
