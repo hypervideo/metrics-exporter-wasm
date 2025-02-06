@@ -1,0 +1,18 @@
+[package]
+name = "metrics-exporter-wasm-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+asn1rs.workspace = true
+metrics.workspace = true
+portable-atomic.workspace = true
+
+[build-dependencies]
+asn1rs.workspace = true
+
+[features]
+default = []
+asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]

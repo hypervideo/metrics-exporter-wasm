@@ -1,14 +1,10 @@
-//! asn.1 metrics implementation using the asn1rs crate
+//! asn.1 metrics implementation using the asn1rs crate.
 
 use metrics::{
     Key,
     KeyName,
     SharedString,
     Unit,
-};
-use serde::{
-    Deserialize,
-    Serialize,
 };
 
 // These types are "public" interface. The asn1 generated types are a bit more
@@ -30,7 +26,7 @@ pub enum Event {
 }
 
 /// The metric type.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MetricType {
     /// A counter is a cumulative metric that represents a single monotonically
     /// increasing counter whose value can only increase or be reset to zero on
@@ -49,7 +45,7 @@ pub enum MetricType {
 }
 
 /// Describes what the metric operation does.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MetricOperation {
     /// Increment a counter by a given value.
     IncrementCounter(u64),

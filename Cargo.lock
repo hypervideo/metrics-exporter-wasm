@@ -965,11 +965,11 @@ dependencies = [
 name = "metrics-exporter-wasm"
 version = "0.1.0"
 dependencies = [
- "asn1rs",
  "brotli",
  "futures",
  "gloo",
  "metrics",
+ "metrics-exporter-wasm-core",
  "portable-atomic",
  "serde",
  "tokio",
@@ -977,6 +977,15 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasmtimer",
  "web-sys",
+]
+
+[[package]]
+name = "metrics-exporter-wasm-core"
+version = "0.1.0"
+dependencies = [
+ "asn1rs",
+ "metrics",
+ "portable-atomic",
 ]
 
 [[package]]

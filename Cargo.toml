@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "core",
   "examples/server-and-client/client",
   "examples/server-and-client/server",
   "examples/standalone-client",
@@ -23,6 +24,7 @@ futures = "0.3.31"
 hyper = "1.6.0"
 metrics = { version = "0.24.1" }
 metrics-exporter-wasm.path = "."
+metrics-exporter-wasm-core.path = "./core"
 metrics-util = "0.19.0"
 portable-atomic = { version = "1.7.0", default-features = false, features = ["fallback"] }
 serde = { version = "1.0.209", features = ["derive"] }
@@ -59,11 +61,11 @@ description = "A metrics-compatible exporter meant for browser WASM applications
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-asn1rs.workspace = true
 brotli = "7.0.0"
 futures.workspace = true
 gloo = { version = "0.11.0", default-features = false, features = ["net", "timers", "futures"] }
 metrics.workspace = true
+metrics-exporter-wasm-core.workspace = true
 portable-atomic.workspace = true
 serde.workspace = true
 tokio = { workspace = true, features = ["sync"] }
@@ -75,12 +77,9 @@ web-sys = { workspace = true, features = ["AbortController"] }
 [target.'cfg(target_pointer_width = "32")'.dependencies]
 portable-atomic.workspace = true
 
-[build-dependencies]
-asn1rs.workspace = true
-
 [features]
 default = []
-asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]
+asn-debug = ["metrics-exporter-wasm-core/asn-debug"]
 
 [profile.release-with-debug]
 inherits = "release"
