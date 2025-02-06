@@ -22,5 +22,10 @@ build:
 build-release:
     cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown --release
     rm -rf {{ DIST_DIR }}
-    wasm-bindgen --target web --out-dir dist {{ ROOT_DIR }}/target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
+    wasm-bindgen --target web --out-dir {{ DIST_DIR }} {{ ROOT_DIR }}/target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
     wasm-opt -O4 {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }} -o {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }}
+
+
+print-wasm-size: build-release
+    du -b {{ DIST_DIR }}/*.wasm | numfmt --to=iec-i --format="%3.5f"
+    du -b {{ ROOT_DIR }}/target/wasm32-unknown-unknown/release/client.wasm | numfmt --to=iec-i --format="%3.5f"

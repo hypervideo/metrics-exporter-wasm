@@ -284,7 +284,7 @@ async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, endpoint: Str
 
         info!(?event, "received metrics event");
 
-        if let Err(err) = post_metrics(Duration::from_secs(5), vec![event].into(), &endpoint).await {
+        if let Err(err) = post_metrics(Duration::from_secs(5), vec![event; 100].into(), &endpoint).await {
             error!(?err, "failed to send metrics");
         }
     }
@@ -299,28 +299,34 @@ async fn post_metrics(timeout: Duration, events: Events, endpoint: &str) -> std:
         Method,
         RequestBuilder,
     };
+    use std::io::Write as _;
     use web_sys::AbortController;
+
+    fn err(err: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> std::io::Error {
+        std::io::Error::new(std::io::ErrorKind::Other, err)
+    }
 
     let controller = AbortController::new().unwrap();
     let signal = controller.signal();
 
-    let body = events
-        .serialize_with_asn1rs()
-        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+    let body = events.serialize_with_asn1rs().map_err(err)?;
+
+    let mut compressed = Vec::new();
+    {
+        let mut writer = brotli::CompressorWriter::new(&mut compressed, 4096, 11, 22);
+        writer.write_all(&body).map_err(err)?;
+    }
 
     let req = RequestBuilder::new(endpoint)
         .method(Method::POST)
         .header("content-type", "application/octet-stream")
+        .header("content-encoding", "br")
         .abort_signal(Some(&signal))
-        .body(body)
-        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+        .body(compressed)
+        .map_err(err)?;
 
     let fut = async {
-        let res = req
-            .send()
-            .await
-            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))?;
-
+        let res = req.send().await.map_err(err)?;
         if !res.ok() {
             let text = res.text().await.map_err(|err| err.to_string()).unwrap_or_default();
             let status = res.status();

@@ -22,6 +22,7 @@ build-debug:
 print-wasm-size: build
     du -b ./dist/*.wasm | numfmt --to=iec-i --format="%3.5f"
     du -b ./target/wasm32-unknown-unknown/release/*.wasm | numfmt --to=iec-i --format="%3.5f"
+    cd examples/server-and-client/client && just print-wasm-size
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 

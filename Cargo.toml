@@ -60,6 +60,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 asn1rs.workspace = true
+brotli = "7.0.0"
 futures.workspace = true
 gloo = { version = "0.11.0", default-features = false, features = ["net", "timers", "futures"] }
 metrics.workspace = true

@@ -966,6 +966,7 @@ name = "metrics-exporter-wasm"
 version = "0.1.0"
 dependencies = [
  "asn1rs",
+ "brotli",
  "futures",
  "gloo",
  "metrics",
