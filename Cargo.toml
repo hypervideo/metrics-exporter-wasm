@@ -27,7 +27,7 @@ metrics-util = "0.19.0"
 portable-atomic = { version = "1.7.0", default-features = false, features = ["fallback"] }
 serde = { version = "1.0.209", features = ["derive"] }
 serde_json = "1.0.138"
-tokio = { version = "1.43.0", features = ["signal"] }
+tokio = "1.43.0"
 tower = "0.5.2"
 tower-http = "0.6.2"
 tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
@@ -35,16 +35,13 @@ tracing-subscriber = "0.3.18"
 wasm-bindgen = { version = "0.2.100", default-features = false }
 wasm-bindgen-futures = "0.4.49"
 wasm-tracing = { git = "https://github.com/hypervideo/wasm-tracing", rev = "351a117449b51cdbf2b7c51386fe999a37a7efe7" }
+web-sys = "0.3.76"
 
 [workspace.dependencies.asn1rs]
 git = "https://github.com/hypervideo/asn1rs"
 rev = "f101f1315ad80dd60d9d4aabfaf9e567467a2cac"
 default-features = false
 features = ["macros", "model"]
-
-[workspace.dependencies.web-sys]
-version = "0.3.76"
-features = ["Performance", "PerformanceEntry", "PerformanceMark", "PerformanceMeasure", "Document", "Window"]
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # root
@@ -58,14 +55,21 @@ edition.workspace = true
 keywords = ["metrics", "telemetry", "wasm"]
 description = "A metrics-compatible exporter meant for browser WASM applications that outputs metrics over HTTP."
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 asn1rs.workspace = true
+futures.workspace = true
+gloo = { version = "0.11.0", default-features = false, features = ["net", "timers", "futures"] }
 metrics.workspace = true
 portable-atomic.workspace = true
 serde.workspace = true
-tokio = { version = "1.43.0", features = ["sync"] }
-tracing = "0.1.41"
+tokio = { workspace = true, features = ["sync"] }
+tracing.workspace = true
 wasm-bindgen-futures.workspace = true
+wasmtimer = "0.4.1"
+web-sys = { workspace = true, features = ["AbortController"] }
 
 [target.'cfg(target_pointer_width = "32")'.dependencies]
 portable-atomic.workspace = true
@@ -76,3 +80,7 @@ asn1rs.workspace = true
 [features]
 default = []
 asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]
+
+[profile.release-with-debug]
+inherits = "release"
+debug = true

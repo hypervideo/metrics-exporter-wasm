@@ -6,12 +6,15 @@ use wasm_bindgen::prelude::*;
 static SNAPSHOTTER: OnceLock<metrics_util::debugging::Snapshotter> = OnceLock::new();
 
 #[wasm_bindgen(js_name = setup_metrics_test)]
-pub fn setup() {
+pub fn setup(endpoint: &str) {
     let debugging_recorder = metrics_util::debugging::DebuggingRecorder::new();
     let snapshotter = debugging_recorder.snapshotter();
     let _ = SNAPSHOTTER.set(snapshotter);
 
-    let wasm_recorder = WasmRecorder::builder().build().expect("failed to install recorder");
+    let wasm_recorder = WasmRecorder::builder()
+        .endpoint(endpoint.to_string())
+        .build()
+        .expect("failed to install recorder");
 
     let recorder = FanoutBuilder::default()
         .add_recorder(debugging_recorder)

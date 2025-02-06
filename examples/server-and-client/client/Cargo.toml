@@ -13,11 +13,15 @@ console_error_panic_hook.workspace = true
 metrics.workspace = true
 metrics-exporter-wasm.workspace = true
 metrics-util.workspace = true
+tracing.workspace = true
 wasm-bindgen.workspace = true
+wasm-tracing.workspace = true
 
 # to fix:
 #   error: the wasm*-unknown-unknown targets are not supported by default, you may need to enable the "js" feature. For more information see: https://docs.rs/getrandom/#webassembly-support
 getrandom = { version = "0.2.15", features = ["js"] }
+gloo = "0.11.0"
+wasm-bindgen-futures.workspace = true
 
 [package.metadata.wasm-pack.profile.dev.wasm-bindgen]
 dwarf-debug-info = true

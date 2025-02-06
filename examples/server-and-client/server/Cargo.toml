@@ -13,13 +13,14 @@ color-eyre.workspace = true
 eyre.workspace = true
 futures.workspace = true
 hyper.workspace = true
+metrics.workspace = true
 metrics-prometheus = "0.9.0"
+prometheus = "0.13.4"
 serde.workspace = true
 serde_json.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["time", "signal"] }
 tower.workspace = true
-tower-http.features = ["fs"]
 tower-http.workspace = true
+tower-http.features = ["decompression-full", "fs"]
 tracing.workspace = true
-tracing-subscriber.features = ["env-filter"]
-tracing-subscriber.workspace = true
+tracing-subscriber = { features = ["env-filter"], workspace = true }

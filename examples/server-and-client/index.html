@@ -16,13 +16,14 @@
     </style>
 </head>
 <body>
-    <h1>metrics-exporter-wasm server & client</h1>
+    <h1>metrics-exporter-wasm</h1>
 
     <script type="module">
-        import init, { setup } from './dist/client.js';
+        import init, { setup, run } from './dist/client.js';
         async function start() {
             await init();
-            setup();
+            setup("/receive-metrics");
+            run();
         }
         start();
     </script>

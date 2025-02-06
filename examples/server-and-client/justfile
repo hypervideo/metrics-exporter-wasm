@@ -1,3 +1,5 @@
+CURRENT_DIR := canonicalize(justfile_directory())
+
 default:
     just --list
 
@@ -7,5 +9,7 @@ build-client:
 build-client-release:
     cd client && just build-release
 
-serve *args="": build-client
-    cargo run -p server -- {{ args }}
+serve *args="":
+    concurrently --kill-others \
+      "cd ../.. && fd -e rs -e toml | entr -r sh -c 'cd {{ CURRENT_DIR }} && cargo run -p server -- {{ args }}'" \
+      "cd ../.. && fd -e rs -e toml | entr -r sh -c 'cd {{ CURRENT_DIR }} && just build-client'"

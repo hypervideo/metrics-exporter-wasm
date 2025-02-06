@@ -1,5 +1,6 @@
 use crate::{
     Event,
+    Events,
     MetricOperation,
     MetricType,
 };
@@ -22,12 +23,15 @@ use metrics::{
 pub use portable_atomic::AtomicU64;
 #[cfg(not(target_pointer_width = "32"))]
 pub use std::sync::atomic::AtomicU64;
-use std::sync::{
-    atomic::{
-        AtomicBool,
-        Ordering,
+use std::{
+    sync::{
+        atomic::{
+            AtomicBool,
+            Ordering,
+        },
+        Arc,
     },
-    Arc,
+    time::Duration,
 };
 use tokio::sync::mpsc::{
     channel,
@@ -107,14 +111,45 @@ impl State {
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
+pub struct EndpointUndefined;
+pub struct EndpointDefined(String);
+
 /// A builder for a [`WasmRecorder`].
-pub struct WasmRecorderBuilder {
+pub struct WasmRecorderBuilder<T> {
     buffer_size: Option<usize>,
+    endpoint: T,
 }
 
-impl WasmRecorderBuilder {
+impl WasmRecorderBuilder<EndpointUndefined> {
+    /// Set the buffer size for the metrics transport.
+    pub fn buffer_size(mut self, size: Option<usize>) -> Self {
+        self.buffer_size = size;
+        self
+    }
+
+    /// Set the endpoint for the metrics transport.
+    pub fn endpoint(self, endpoint: impl ToString) -> WasmRecorderBuilder<EndpointDefined> {
+        WasmRecorderBuilder {
+            buffer_size: self.buffer_size,
+            endpoint: EndpointDefined(endpoint.to_string()),
+        }
+    }
+}
+
+impl WasmRecorderBuilder<EndpointDefined> {
+    /// Set the buffer size for the metrics transport.
+    pub fn buffer_size(mut self, size: Option<usize>) -> Self {
+        self.buffer_size = size;
+        self
+    }
+
     /// Create a new builder for a [`WasmRecorder`].
     pub fn build(self) -> Result<WasmRecorder, SetRecorderError<WasmRecorder>> {
+        let Self {
+            buffer_size: _,
+            endpoint: EndpointDefined(endpoint),
+        } = self;
+
         let (tx, rx) = if let Some(size) = self.buffer_size {
             channel(size)
         } else {
@@ -127,7 +162,7 @@ impl WasmRecorderBuilder {
             let state = state.clone();
             let buffer_size = self.buffer_size;
             async move {
-                run_transport(rx, state, buffer_size).await;
+                run_transport(rx, state, endpoint, buffer_size).await;
             }
         });
 
@@ -138,12 +173,6 @@ impl WasmRecorderBuilder {
     pub fn install(self) -> Result<(), SetRecorderError<WasmRecorder>> {
         self.build()?.install()
     }
-
-    /// Set the buffer size for the metrics transport.
-    pub fn buffer_size(mut self, size: Option<usize>) -> Self {
-        self.buffer_size = size;
-        self
-    }
 }
 
 /// A metrics recorder for use in WASM environments.
@@ -153,8 +182,11 @@ pub struct WasmRecorder {
 
 impl WasmRecorder {
     /// Create a new builder for a [`WasmRecorder`].
-    pub fn builder() -> WasmRecorderBuilder {
-        WasmRecorderBuilder { buffer_size: None }
+    pub fn builder() -> WasmRecorderBuilder<EndpointUndefined> {
+        WasmRecorderBuilder {
+            buffer_size: None,
+            endpoint: EndpointUndefined,
+        }
     }
 
     /// Install this recorder as the global recorder.
@@ -239,7 +271,7 @@ impl HistogramFn for Handle {
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, _buffer_size: Option<usize>) {
+async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, endpoint: String, _buffer_size: Option<usize>) {
     debug!("starting metrics transport");
 
     state.increment_clients();
@@ -251,9 +283,62 @@ async fn run_transport(mut rx: Receiver<Event>, state: Arc<State>, _buffer_size:
         };
 
         info!(?event, "received metrics event");
+
+        if let Err(err) = post_metrics(Duration::from_secs(5), vec![event].into(), &endpoint).await {
+            error!(?err, "failed to send metrics");
+        }
     }
 
     state.decrement_clients();
 
     debug!("metrics transport stopped");
+}
+
+async fn post_metrics(timeout: Duration, events: Events, endpoint: &str) -> std::io::Result<()> {
+    use gloo::net::http::{
+        Method,
+        RequestBuilder,
+    };
+    use web_sys::AbortController;
+
+    let controller = AbortController::new().unwrap();
+    let signal = controller.signal();
+
+    let body = events
+        .serialize_with_asn1rs()
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+
+    let req = RequestBuilder::new(endpoint)
+        .method(Method::POST)
+        .header("content-type", "application/octet-stream")
+        .abort_signal(Some(&signal))
+        .body(body)
+        .map_err(|error| std::io::Error::new(std::io::ErrorKind::Other, error))?;
+
+    let fut = async {
+        let res = req
+            .send()
+            .await
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err))?;
+
+        if !res.ok() {
+            let text = res.text().await.map_err(|err| err.to_string()).unwrap_or_default();
+            let status = res.status();
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Failed to fetch server info. status={status} {text}"),
+            ));
+        };
+
+        Ok(())
+    };
+
+    let fut = std::pin::pin!(fut);
+    match futures::future::select(fut, gloo::timers::future::sleep(timeout)).await {
+        futures::future::Either::Left((res, _)) => res,
+        futures::future::Either::Right(_) => {
+            controller.abort();
+            Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Timed out"))
+        }
+    }
 }
