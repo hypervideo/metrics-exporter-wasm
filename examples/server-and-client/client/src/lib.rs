@@ -1,4 +1,7 @@
-use metrics_exporter_wasm::WasmHttpRecorder;
+use metrics_exporter_wasm::{
+    MetricsHttpSender,
+    WasmRecorder,
+};
 use std::time::Duration;
 use wasm_bindgen::prelude::*;
 
@@ -17,11 +20,18 @@ pub fn setup(endpoint: &str) {
         wasm_tracing::set_as_global_default_with_config(config).expect("Failed to set as global default");
     }
 
-    let recorder = WasmHttpRecorder::builder()
-        .endpoint(endpoint.to_string())
-        .send_frequency(Duration::from_secs(5))
+    let recorder = WasmRecorder::builder()
+        .buffer_size(5)
         .build()
         .expect("failed to create recorder");
+
+    let guard = MetricsHttpSender::new()
+        .endpoint(endpoint.to_string())
+        .send_frequency(Duration::from_secs(5))
+        .start_with(&recorder);
+
+    // Run forever
+    guard.disarm();
 
     metrics::set_global_recorder(recorder).expect("failed to set global recorder");
 

@@ -900,6 +900,7 @@ dependencies = [
  "scopeguard",
  "serde",
  "tokio",
+ "tokio-util",
  "tracing",
  "wasm-bindgen-futures",
  "wasmtimer",
@@ -1485,9 +1486,11 @@ dependencies = [
  "metrics",
  "metrics-exporter-wasm",
  "metrics-util",
+ "tokio",
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasm-tracing",
 ]
 
@@ -1594,6 +1597,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]

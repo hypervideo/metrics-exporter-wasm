@@ -70,6 +70,7 @@ metrics-exporter-wasm-core.workspace = true
 scopeguard = "1.2.0"
 serde.workspace = true
 tokio = { workspace = true, features = ["sync", "macros"] }
+tokio-util = { version = "0.7.13", features = ["futures-util"] }
 tracing.workspace = true
 wasm-bindgen-futures.workspace = true
 wasmtimer = "0.4.1"
