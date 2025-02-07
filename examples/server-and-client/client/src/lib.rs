@@ -27,7 +27,7 @@ pub fn setup(endpoint: &str) {
 
     let guard = MetricsHttpSender::new()
         .endpoint(endpoint.to_string())
-        .send_frequency(Duration::from_secs(5))
+        .send_frequency(Duration::from_secs(1))
         .start_with(&recorder);
 
     // Run forever
@@ -50,8 +50,8 @@ pub async fn run() {
 pub async fn do_something(i: i64) {
     let labels = [("i", format!("{}!", i))];
 
-    metrics::describe_counter!("invocations", metrics::Unit::Count, "counting invocations");
-    metrics::counter!("invocations", &labels).increment(1);
+    metrics::describe_counter!("test::foo", metrics::Unit::Count, "counting invocations");
+    metrics::counter!("test::foo", &labels).increment(1);
 
     gloo::timers::future::sleep(std::time::Duration::from_millis(100)).await;
 }

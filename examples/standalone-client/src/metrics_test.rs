@@ -60,5 +60,5 @@ pub fn run() {
 }
 
 pub fn do_something() {
-    metrics::counter!("invocations").increment(1);
+    metrics::counter!("test.foo").increment(1);
 }
