@@ -8,7 +8,6 @@ repository.workspace = true
 [dependencies]
 asn1rs.workspace = true
 metrics.workspace = true
-portable-atomic.workspace = true
 
 [build-dependencies]
 asn1rs.workspace = true

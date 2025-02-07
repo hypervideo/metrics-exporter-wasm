@@ -19,10 +19,7 @@ use metrics::{
     SharedString,
     Unit,
 };
-#[cfg(target_pointer_width = "32")]
-pub use portable_atomic::AtomicU64;
-#[cfg(not(target_pointer_width = "32"))]
-pub use std::sync::atomic::AtomicU64;
+pub use std::sync::atomic::AtomicUsize;
 use std::{
     collections::VecDeque,
     sync::{
@@ -47,7 +44,7 @@ use wasmtimer::{
 /// handler will forward the metrics to other subscribers inside the app itself
 /// or send the metrics to a remote server.
 struct State {
-    client_count: AtomicU64,
+    client_count: AtomicUsize,
     should_send: AtomicBool,
     tx: mpsc::UnboundedSender<Event>,
 }
@@ -55,7 +52,7 @@ struct State {
 impl State {
     fn new(tx: mpsc::UnboundedSender<Event>) -> State {
         State {
-            client_count: AtomicU64::new(0),
+            client_count: AtomicUsize::new(0),
             should_send: AtomicBool::new(false),
             tx,
         }

@@ -897,7 +897,6 @@ dependencies = [
  "gloo",
  "metrics",
  "metrics-exporter-wasm-core",
- "portable-atomic",
  "scopeguard",
  "serde",
  "tokio",
@@ -913,7 +912,6 @@ version = "0.1.0"
 dependencies = [
  "asn1rs",
  "metrics",
- "portable-atomic",
 ]
 
 [[package]]
