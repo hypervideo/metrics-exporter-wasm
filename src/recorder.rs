@@ -49,7 +49,7 @@ impl State {
     ) {
         trace!(?key_name, ?metric_type, ?unit, ?description, "registering metric");
         let tx = self.tx.clone();
-        let _ = tx.send(Event::Metadata {
+        let _ = tx.send(Event::Description {
             name: key_name,
             metric_type,
             unit,

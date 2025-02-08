@@ -4,7 +4,7 @@ BEGIN
     Events ::= SEQUENCE OF Event
 
     Event ::= CHOICE {
-        metadata SEQUENCE {
+        description SEQUENCE {
             keyName      UTF8String,
             metricType   MetricType,
             unit         Unit OPTIONAL,

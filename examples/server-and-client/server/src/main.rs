@@ -53,7 +53,7 @@ async fn receive_metrics(data: axum::body::Bytes) -> hyper::StatusCode {
             for event in events {
                 dbg!(&event);
                 match event {
-                    Event::Metadata {
+                    Event::Description {
                         name,
                         metric_type,
                         unit,

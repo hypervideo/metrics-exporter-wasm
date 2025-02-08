@@ -48,7 +48,7 @@ fn events_1(n: usize) -> Vec<Event> {
 }
 
 fn events_2(n: usize) -> Vec<Event> {
-    let event = Event::Metadata {
+    let event = Event::Description {
         name: "hello".to_string().into(),
         metric_type: MetricType::Gauge,
         unit: Some(metrics::Unit::Bytes),

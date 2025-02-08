@@ -127,7 +127,7 @@ async fn run_transport(
         let mut backoff = backoff::ExponentialBackoff::default();
         while let Err(err) = post_metrics(
             Duration::from_secs(5),
-            &vec![Event::Metadata {
+            &vec![Event::Description {
                 name: KeyName::from_const_str("metrics_processed"),
                 metric_type: MetricType::Counter,
                 unit: None,

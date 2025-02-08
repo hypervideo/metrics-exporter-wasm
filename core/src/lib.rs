@@ -13,7 +13,7 @@ use metrics::{
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
-    Metadata {
+    Description {
         name: KeyName,
         metric_type: MetricType,
         unit: Option<Unit>,
@@ -111,17 +111,17 @@ impl From<generated::Events> for Vec<Event> {
 impl From<generated::Event> for Event {
     fn from(value: generated::Event) -> Self {
         use generated::{
-            EventMetadata,
+            EventDescription,
             EventMetric,
             EventMetricKey,
         };
         match value {
-            generated::Event::Metadata(EventMetadata {
+            generated::Event::Description(EventDescription {
                 key_name: name,
                 metric_type,
                 unit,
                 description,
-            }) => Event::Metadata {
+            }) => Event::Description {
                 name: name.into(),
                 metric_type: metric_type.into(),
                 unit: unit.map(Into::into),
@@ -201,18 +201,18 @@ impl From<Vec<Event>> for generated::Events {
 impl From<Event> for generated::Event {
     fn from(value: Event) -> Self {
         use generated::{
-            EventMetadata,
+            EventDescription,
             EventMetric,
             EventMetricKey,
             EventMetricKeyLabel,
         };
         match value {
-            Event::Metadata {
+            Event::Description {
                 name,
                 metric_type,
                 unit,
                 description,
-            } => generated::Event::Metadata(EventMetadata {
+            } => generated::Event::Description(EventDescription {
                 key_name: name.as_str().into(),
                 metric_type: metric_type.into(),
                 unit: unit.map(Into::into),
