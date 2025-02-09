@@ -9,7 +9,7 @@ build-client:
 build-client-release:
     cd client && just build-release
 
-serve *args="":
+serve:
     concurrently --kill-others \
-      "cd ../.. && fd -e rs -e toml | entr -r sh -c 'cd {{ CURRENT_DIR }} && cargo run -p server -- {{ args }}'" \
+      "cd ../.. && fd -e rs -e toml | entr -r sh -c 'cd {{ CURRENT_DIR }}/server && cargo run -- {{ CURRENT_DIR }}'" \
       "cd ../.. && fd -e rs -e toml | entr -r sh -c 'cd {{ CURRENT_DIR }} && just build-client'"

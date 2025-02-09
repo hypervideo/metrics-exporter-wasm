@@ -2,11 +2,13 @@
 resolver = "2"
 members = [
   "core",
+]
+exclude = [
   "examples/server-and-client/client",
   "examples/server-and-client/server",
+  "examples/zstd-example",
   "examples/standalone-client",
 ]
-exclude = []
 
 [workspace.package]
 version = "0.1.0"
@@ -15,29 +17,20 @@ edition = "2021"
 repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
-axum = "0.8.1"
-axum-prometheus = "0.8.0"
-color-eyre = "0.6.3"
-console_error_panic_hook = "0.1.7"
-eyre = "0.6.12"
+backoff = { version = "0.4.0", features = ["wasm-bindgen", "futures"] }
+cfg-iif = "0.2.7"
 futures = "0.3.31"
-gloo = { version = "0.11.0", default-features = false }
-hyper = "1.6.0"
+gloo = { version = "0.11.0", default-features = false, features = ["net"] }
 metrics = { version = "0.24.1" }
-metrics-exporter-wasm.path = "."
 metrics-exporter-wasm-core.path = "./core"
-metrics-util = "0.19.0"
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.138"
-tokio = "1.43.0"
-tower = "0.5.2"
-tower-http = "0.6.2"
+scopeguard = "1.2.0"
+tokio = { version = "1.43.0", default-features = false, features = ["sync", "macros"] }
+tokio-util = { version = "0.7.13", default-features = false, features = ["futures-util"] }
 tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
-tracing-subscriber = "0.3.18"
 wasm-bindgen = { version = "0.2.100", default-features = false }
 wasm-bindgen-futures = "0.4.49"
-wasm-tracing = { git = "https://github.com/hypervideo/wasm-tracing", rev = "351a117449b51cdbf2b7c51386fe999a37a7efe7" }
-web-sys = "0.3.76"
+wasmtimer = "0.4.1"
+web-sys = { version = "0.3.76", features = ["AbortController"] }
 
 [workspace.dependencies.asn1rs]
 git = "https://github.com/hypervideo/asn1rs"
@@ -57,28 +50,26 @@ edition.workspace = true
 keywords = ["metrics", "telemetry", "wasm"]
 description = "A metrics-compatible exporter meant for browser WASM applications that outputs metrics over HTTP."
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
-backoff = { version = "0.4.0", features = ["wasm-bindgen", "futures"] }
-brotli = "7.0.0"
+backoff.workspace = true
+cfg-iif.workspace = true
 futures.workspace = true
-gloo = { workspace = true, features = ["net"] }
+gloo.workspace = true
 metrics.workspace = true
 metrics-exporter-wasm-core.workspace = true
-scopeguard = "1.2.0"
-serde.workspace = true
-tokio = { workspace = true, features = ["sync", "macros"] }
-tokio-util = { version = "0.7.13", features = ["futures-util"] }
+scopeguard.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
 tracing.workspace = true
 wasm-bindgen-futures.workspace = true
-wasmtimer = "0.4.1"
-web-sys = { workspace = true, features = ["AbortController"] }
+wasmtimer.workspace = true
+web-sys.workspace = true
 
 [features]
 default = []
 asn-debug = ["metrics-exporter-wasm-core/asn-debug"]
+compress-brotli = ["metrics-exporter-wasm-core/compress-brotli"]
+compress-zstd = ["metrics-exporter-wasm-core/compress-zstd"]
 
 [profile.release-with-debug]
 inherits = "release"

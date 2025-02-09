@@ -8,28 +8,57 @@ use metrics_exporter_wasm::{
 
 pub fn run() {
     asn_serialization();
+    asn_serialization_brotli();
+    asn_serialization_zstd();
     asn_deserialization();
 }
 
 const N: u64 = 1000;
 
 fn asn_serialization() {
+    use metrics_exporter_wasm::WasmMetricsEncode as _;
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         let result = bench_env(data.clone(), move |events| {
-            Events::from(events)
-                .serialize_with_asn1rs()
-                .expect("failed to serialize events")
+            Events::from(events).encode().expect("failed to serialize events")
         });
-        tracing::info!("| asn1rs serialize {i} | {result}");
+        let size = Events::from(data).encode().unwrap().len();
+        tracing::info!("| asn1rs serialize {i} | {result} | {size}B");
+    }
+}
+
+fn asn_serialization_brotli() {
+    use metrics_exporter_wasm::WasmMetricsEncodeBrotli as _;
+    for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
+        let result = bench_env(data.clone(), move |events| {
+            Events::from(events).encode().expect("failed to serialize events")
+        });
+        let size = Events::from(data).encode().unwrap().len();
+        tracing::info!("| asn1rs serialize brotli {i} | {result} | {size}B");
+    }
+}
+
+fn asn_serialization_zstd() {
+    use metrics_exporter_wasm::WasmMetricsEncodeZstd as _;
+    for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
+        let result = bench_env(data.clone(), move |events| {
+            Events::from(events).encode().expect("failed to serialize events")
+        });
+        let size = Events::from(data).encode().unwrap().len();
+        tracing::info!("| asn1rs serialize zstd {i} | {result} | {size}B");
     }
 }
 
 fn asn_deserialization() {
+    use metrics_exporter_wasm::{
+        WasmMetricsDecode as _,
+        WasmMetricsEncode as _,
+    };
+
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         {
-            let data = Events::from(data.clone()).serialize_with_asn1rs().unwrap();
+            let data = Events::from(data.clone()).encode().unwrap();
             let result = bench_env(data, move |data| {
-                Events::deserialize_with_asn1rs(&data).expect("failed to serialize data")
+                Events::decode(&data).expect("failed to serialize data")
             });
             tracing::info!("| asn1rs serialize {i} | {result}");
         }

@@ -7,7 +7,7 @@ WASM_BINDGEN_DEBUG_FILE_NAME := BASE_NAME + "_bg.debug.wasm"
 export WASM_TRACING_BASE_URL := "file://" + canonicalize(justfile_directory() / "..") + "/"
 
 CURRENT_DIR := canonicalize(justfile_directory())
-ROOT_DIR := canonicalize(CURRENT_DIR / "../../..")
+ROOT_DIR := CURRENT_DIR
 DIST_DIR := justfile_directory() / "../dist"
 
 default:
@@ -24,7 +24,6 @@ build-release:
     rm -rf {{ DIST_DIR }}
     wasm-bindgen --target web --out-dir {{ DIST_DIR }} {{ ROOT_DIR }}/target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
     wasm-opt -O4 {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }} -o {{ DIST_DIR }}/{{ WASM_BINDGEN_FILE_NAME }}
-
 
 print-wasm-size: build-release
     du -b {{ DIST_DIR }}/*.wasm | numfmt --to=iec-i --format="%3.5f"

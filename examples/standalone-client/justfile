@@ -14,13 +14,13 @@ default:
 build:
     cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown
     rm -rf ./dist
-    wasm-bindgen --target web --keep-debug --out-dir dist ../../target/wasm32-unknown-unknown/debug/{{ WASM_FILE_NAME }}
+    wasm-bindgen --target web --keep-debug --out-dir dist target/wasm32-unknown-unknown/debug/{{ WASM_FILE_NAME }}
     wasm-split ./dist/{{ WASM_BINDGEN_FILE_NAME }} -d ./dist/{{ WASM_BINDGEN_DEBUG_FILE_NAME }} --strip
 
 build-release:
     cargo build -p {{ BASE_NAME }} --target wasm32-unknown-unknown --release
     rm -rf ./dist
-    wasm-bindgen --target web --out-dir dist ../../target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
+    wasm-bindgen --target web --out-dir dist target/wasm32-unknown-unknown/release/{{ WASM_FILE_NAME }}
     wasm-opt -O4 ./dist/{{ WASM_BINDGEN_FILE_NAME }} -o ./dist/{{ WASM_BINDGEN_FILE_NAME }}
 
 dev: build

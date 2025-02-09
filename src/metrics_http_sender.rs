@@ -201,6 +201,8 @@ async fn run_transport(
 
                     Ok(event) => {
                         if buffer_size.is_some_and(|buffer_size| events.len() >= buffer_size) {
+                            // TODO(rk) 2025-02-09: while hyper is behind the current rust version
+                            #[allow(clippy::unnecessary_map_or)]
                             if last_warning.map_or(true,|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
                                 warn!("metrics chunk size exceeded, dropping metrics");
                                 last_warning = Some(Instant::now());
@@ -224,7 +226,6 @@ async fn post_metrics(timeout: Duration, events: &Events, endpoint: &str) -> std
         Method,
         RequestBuilder,
     };
-    use std::io::Write as _;
     use web_sys::AbortController;
 
     fn err(err: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> std::io::Error {
@@ -234,22 +235,23 @@ async fn post_metrics(timeout: Duration, events: &Events, endpoint: &str) -> std
     let controller = AbortController::new().unwrap();
     let signal = controller.signal();
 
-    let body = events.serialize_with_asn1rs().map_err(err)?;
     let headers = Headers::new();
     headers.set("content-type", "application/octet-stream");
 
-    const COMPRESS: bool = true;
-    let body = if COMPRESS {
-        headers.set("Content-Encoding", "br");
-        let mut compressed = Vec::new();
-        {
-            let mut writer = brotli::CompressorWriter::new(&mut compressed, 4096, 11, 22);
-            writer.write_all(&body).map_err(err)?;
-        }
-        compressed
+    let body = cfg_iif!(feature = "compress-zstd" {
+        use metrics_exporter_wasm_core::WasmMetricsEncodeZstd as _;
+        headers.set("Content-Encoding", "zstd");
+        events.encode().map_err(err)?
     } else {
-        body
-    };
+        cfg_iif!(feature = "compress-brotli" {
+            use metrics_exporter_wasm_core::WasmMetricsEncodeBrotli as _;
+            headers.set("Content-Encoding", "br");
+            events.encode().map_err(err)?
+        } else {
+            use metrics_exporter_wasm_core::WasmMetricsEncode as _;
+            events.encode().map_err(err)?
+        })
+    });
 
     let req = RequestBuilder::new(endpoint)
         .method(Method::POST)

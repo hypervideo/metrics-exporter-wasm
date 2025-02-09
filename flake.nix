@@ -57,6 +57,7 @@
 
           RUST_BACKTRACE = "1";
           RUST_LOG = "debug,wasm_bindgen=info,walrus=info";
+          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
         };
       }
     );

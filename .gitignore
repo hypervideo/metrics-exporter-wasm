@@ -1,4 +1,9 @@
+Cargo.lock
 /target/
 /.direnv/
 /**/dist
 /DEV.org
+/.cache
+/examples/server-and-client/client/target/
+/examples/server-and-client/server/target/
+/examples/standalone-client/target/

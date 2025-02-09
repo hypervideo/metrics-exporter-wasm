@@ -66,44 +66,95 @@ pub enum MetricOperation {
 use asn1rs::prelude::*;
 pub use generated::Events;
 
+pub type Error = std::io::Error;
+pub type Result<T> = std::result::Result<T, Error>;
+
 mod generated {
     include!(concat!(env!("OUT_DIR"), "/metrics.rs"));
 }
 
-impl generated::Events {
+/// Encode the metrics using the ASN.1 UPER encoding.
+pub trait WasmMetricsEncode {
+    fn encode(&self) -> Result<Vec<u8>>;
+}
+
+impl WasmMetricsEncode for Events {
     /// Serialize the events using asn1.
-    pub fn serialize_with_asn1rs(&self) -> Result<Vec<u8>, asn1rs::protocol::per::Error> {
+    fn encode(&self) -> Result<Vec<u8>> {
         let mut writer = UperWriter::default();
-        writer.write(self)?;
-
+        writer
+            .write(self)
+            .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))?;
         Ok(writer.into_bytes_vec())
-    }
-
-    /// Deserialize from asn1.
-    pub fn deserialize_with_asn1rs(data: &[u8]) -> Result<Self, asn1rs::protocol::per::Error> {
-        let mut reader = UperReader::from(Bits::from(data));
-        reader.read::<generated::Events>()
     }
 }
 
-impl Event {
+/// Encode the metrics using the ASN.1 UPER encoding and compress using Brotli.
+#[cfg(feature = "compress-brotli")]
+pub trait WasmMetricsEncodeBrotli: WasmMetricsEncode {
+    fn encode(&self) -> Result<Vec<u8>>;
+}
+
+#[cfg(feature = "compress-brotli")]
+impl WasmMetricsEncodeBrotli for Events {
     /// Serialize the events using asn1.
-    pub fn serialize_with_asn1rs(self) -> Result<Vec<u8>, asn1rs::protocol::per::Error> {
-        let mut writer = UperWriter::default();
-        writer.write(&generated::Event::from(self))?;
+    fn encode(&self) -> Result<Vec<u8>> {
+        let encoded = WasmMetricsEncode::encode(self)?;
 
-        Ok(writer.into_bytes_vec())
-    }
+        let mut compressed = Vec::new();
+        {
+            use std::io::Write as _;
+            let mut writer = brotli::CompressorWriter::new(&mut compressed, 4096, 11, 22);
+            writer
+                .write_all(&encoded)
+                .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))?;
+        }
 
-    /// Deserialize from asn1.
-    pub fn deserialize_with_asn1rs(data: &[u8]) -> Result<Self, asn1rs::protocol::per::Error> {
-        let mut reader = UperReader::from(Bits::from(data));
-        Ok(reader.read::<generated::Event>()?.into())
+        Ok(compressed)
     }
 }
 
-impl From<generated::Events> for Vec<Event> {
-    fn from(value: generated::Events) -> Self {
+#[cfg(feature = "compress-zstd")]
+pub trait WasmMetricsEncodeZstd: WasmMetricsEncode {
+    fn encode(&self) -> Result<Vec<u8>>;
+}
+
+#[cfg(feature = "compress-zstd")]
+impl WasmMetricsEncodeZstd for Events {
+    /// Serialize the events using asn1.
+    fn encode(&self) -> Result<Vec<u8>> {
+        use wasm_bindgen::prelude::*;
+        use web_sys::js_sys::Uint8Array;
+
+        // There should be an external function exposed that implements the zstd compression.
+        #[wasm_bindgen]
+        extern "C" {
+            #[wasm_bindgen()]
+            fn zstd_compress(buf: Uint8Array) -> Uint8Array;
+        }
+        let encoded = WasmMetricsEncode::encode(self)?;
+        let compressed = zstd_compress(Uint8Array::from(encoded.as_slice()));
+        Ok(compressed.to_vec())
+    }
+}
+
+/// Decode the metrics using the ASN.1 UPER encoding.
+pub trait WasmMetricsDecode: Sized {
+    fn decode(data: &[u8]) -> Result<Self>;
+}
+
+impl WasmMetricsDecode for Events {
+    /// Deserialize from asn1.
+    fn decode(data: &[u8]) -> Result<Self> {
+        let mut reader = UperReader::from(Bits::from(data));
+        reader
+            .read::<Events>()
+            .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))
+    }
+}
+
+impl From<Events> for Vec<Event> {
+    fn from(value: Events) -> Self {
         value.0.into_iter().map(Event::from).collect()
     }
 }
@@ -192,9 +243,9 @@ impl From<generated::Unit> for Unit {
     }
 }
 
-impl From<Vec<Event>> for generated::Events {
+impl From<Vec<Event>> for Events {
     fn from(value: Vec<Event>) -> Self {
-        generated::Events(value.into_iter().map(Into::into).collect())
+        Events(value.into_iter().map(Into::into).collect())
     }
 }
 
@@ -303,11 +354,12 @@ mod tests {
             key: Key::from_parts("some-key", &[("key", "value")]),
             op: MetricOperation::SetGauge(42.2312313213f64),
         };
+        let events = Events::from(vec![event]);
 
-        let bytes = event.clone().serialize_with_asn1rs().unwrap();
-        assert_eq!(bytes.len(), 29);
+        let bytes = WasmMetricsEncode::encode(&events).unwrap();
+        assert_eq!(bytes.len(), 30);
 
-        let event2 = Event::deserialize_with_asn1rs(&bytes).unwrap();
-        assert_eq!(event, event2);
+        let events2 = Events::decode(&bytes).unwrap();
+        assert_eq!(events, events2);
     }
 }

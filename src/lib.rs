@@ -13,11 +13,17 @@
 mod metrics_http_sender;
 mod recorder;
 
+#[cfg(feature = "compress-brotli")]
+pub use metrics_exporter_wasm_core::WasmMetricsEncodeBrotli;
+#[cfg(feature = "compress-zstd")]
+pub use metrics_exporter_wasm_core::WasmMetricsEncodeZstd;
 pub use metrics_exporter_wasm_core::{
     Event,
     Events,
     MetricOperation,
     MetricType,
+    WasmMetricsDecode,
+    WasmMetricsEncode,
 };
 pub use metrics_http_sender::{
     EndpointDefined,
@@ -34,3 +40,6 @@ extern crate tracing;
 
 #[macro_use]
 extern crate scopeguard;
+
+#[macro_use]
+extern crate cfg_iif;

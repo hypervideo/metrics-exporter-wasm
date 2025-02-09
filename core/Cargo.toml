@@ -7,11 +7,16 @@ repository.workspace = true
 
 [dependencies]
 asn1rs.workspace = true
+brotli = { version = "7.0.0", optional = true }
 metrics.workspace = true
+wasm-bindgen.workspace = true
+web-sys.workspace = true
 
 [build-dependencies]
 asn1rs.workspace = true
 
 [features]
 default = []
+compress-brotli = ["dep:brotli"]
+compress-zstd = []
 asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]

@@ -12,6 +12,7 @@ use axum::{
 use metrics_exporter_wasm_core::{
     Event,
     Events,
+    WasmMetricsDecode as _,
 };
 use std::{
     net::SocketAddr,
@@ -47,7 +48,7 @@ async fn metrics() -> impl IntoResponse {
 }
 
 async fn receive_metrics(data: axum::body::Bytes) -> hyper::StatusCode {
-    match Events::deserialize_with_asn1rs(&data) {
+    match Events::decode(&data) {
         Ok(events) => {
             let events: Vec<Event> = events.into();
             for event in events {
@@ -140,9 +141,11 @@ async fn main() {
 
     metrics_test();
 
+    let public_dir = std::env::args().nth(1).unwrap_or_else(|| ".".to_string());
+
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-    let decompression_layer = RequestDecompressionLayer::new().br(true);
+    let decompression_layer = RequestDecompressionLayer::new().br(true).zstd(true);
 
     let app = Router::<()>::new()
         .route("/fast", get(|| async {}))
@@ -155,7 +158,7 @@ async fn main() {
         .route("/metrics", get(metrics))
         .route("/receive-metrics", post(receive_metrics))
         .layer(decompression_layer)
-        .fallback_service(ServeDir::new(".").append_index_html_on_directories(true));
+        .fallback_service(ServeDir::new(public_dir).append_index_html_on_directories(true));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     info!("starting on {:?}", addr);
