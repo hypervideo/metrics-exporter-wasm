@@ -18,12 +18,12 @@
     <h1>metrics-exporter-wasm</h1>
 
     <div style="display: flex; flex-direction: column; align-items: center; margin-top: 20px; gap: 16px;">
-      <button onclick="run_asn_benchmark()">Run ASN Benchmark</button>
       <button onclick="run_metrics_test()">Metrics Test</button>
+      <button onclick="run_benchmarks()">Run Benchmarks</button>
     </div>
 
     <script type="module">
-        import init, { setup, run_asn_benchmark, setup_metrics_test, run_metrics_test } from './dist/standalone_client.js';
+        import init, { setup, run_benchmarks, setup_metrics_test, run_metrics_test } from './dist/standalone_client.js';
         async function start() {
             await init();
             setup();
@@ -31,7 +31,7 @@
         }
         start();
 
-        window.run_asn_benchmark = run_asn_benchmark;
+        window.run_benchmarks = run_benchmarks;
         window.run_metrics_test = run_metrics_test;
     </script>
 </body>

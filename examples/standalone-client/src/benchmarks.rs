@@ -1,3 +1,4 @@
+use crate::util::benchmark::bench_env;
 use metrics_exporter_wasm::{
     Event,
     Events,
@@ -6,15 +7,13 @@ use metrics_exporter_wasm::{
 };
 
 pub fn run() {
-    serialization();
-    deserialization();
+    asn_serialization();
+    asn_deserialization();
 }
 
-const N: usize = 1000;
+const N: u64 = 1000;
 
-fn serialization() {
-    use crate::benchmark::bench_env;
-
+fn asn_serialization() {
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         let result = bench_env(data.clone(), move |events| {
             Events::from(events)
@@ -25,9 +24,7 @@ fn serialization() {
     }
 }
 
-fn deserialization() {
-    use crate::benchmark::bench_env;
-
+fn asn_deserialization() {
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         {
             let data = Events::from(data.clone()).serialize_with_asn1rs().unwrap();
@@ -39,15 +36,16 @@ fn deserialization() {
     }
 }
 
-fn events_1(n: usize) -> Vec<Event> {
-    let event = Event::Metric {
-        key: metrics::Key::from_parts("hello", &[("hello", "world")]),
-        op: MetricOperation::SetCounter(25),
-    };
-    (0..n).map(|_| event.clone()).collect()
+fn events_1(n: u64) -> Vec<Event> {
+    (0..n)
+        .map(|i| Event::Metric {
+            key: metrics::Key::from_parts("hello", &[("hello", "world")]),
+            op: MetricOperation::SetCounter(i),
+        })
+        .collect()
 }
 
-fn events_2(n: usize) -> Vec<Event> {
+fn events_2(n: u64) -> Vec<Event> {
     let event = Event::Description {
         name: "hello".to_string().into(),
         metric_type: MetricType::Gauge,

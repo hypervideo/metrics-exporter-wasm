@@ -1,6 +1,5 @@
-mod asn_benchmark;
-mod benchmark;
-mod metrics_test;
+mod benchmarks;
+mod util;
 
 use metrics_exporter_wasm::WasmRecorder;
 use tokio::sync::broadcast::error::RecvError;
@@ -22,11 +21,6 @@ pub fn setup() {
     }
 
     tracing::info!("tracing setup complete");
-}
-
-#[wasm_bindgen]
-pub fn run_asn_benchmark() {
-    asn_benchmark::run();
 }
 
 #[wasm_bindgen(js_name = setup_metrics_test)]
@@ -70,4 +64,11 @@ pub fn run_metrics_test() {
 
 pub fn do_something() {
     metrics::counter!("test.foo").increment(1);
+}
+
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+#[wasm_bindgen]
+pub fn run_benchmarks() {
+    benchmarks::run();
 }
