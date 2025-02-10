@@ -64,7 +64,7 @@ web-sys.workspace = true
 web-sys.features = ["console"]
 
 [features]
-default = ["compress-zstd-external"]
+default = []
 # Utilities to debug ASN.1. Only useful for development.
 asn-debug = ["metrics-exporter-wasm-core/asn-debug"]
 # Support for metrics compression with brotli. Uses the `brotli` crate.
