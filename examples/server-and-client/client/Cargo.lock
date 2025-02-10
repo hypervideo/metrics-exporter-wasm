@@ -146,12 +146,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "cfg-iif"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "255dfdb83a1981beccf87f59985047a3dce3c33e7de298e20d57b4004068a7e5"
-
-[[package]]
 name = "client"
 version = "0.0.0"
 dependencies = [
@@ -583,7 +577,6 @@ name = "metrics-exporter-wasm"
 version = "0.1.0"
 dependencies = [
  "backoff",
- "cfg-iif",
  "futures",
  "gloo",
  "metrics",
@@ -603,7 +596,9 @@ version = "0.1.0"
 dependencies = [
  "asn1rs",
  "metrics",
+ "tracing",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 

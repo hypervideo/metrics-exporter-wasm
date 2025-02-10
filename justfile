@@ -26,7 +26,7 @@ print-wasm-size: build
 
 check:
     cargo clippy -p metrics-exporter-wasm --target wasm32-unknown-unknown -- -D warnings
-    cargo clippy -p metrics-exporter-wasm --features compress-zstd --target wasm32-unknown-unknown -- -D warnings
+    cargo clippy -p metrics-exporter-wasm --features compress-zstd-external --target wasm32-unknown-unknown -- -D warnings
     cargo clippy -p metrics-exporter-wasm --features compress-brotli --target wasm32-unknown-unknown -- -D warnings
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-

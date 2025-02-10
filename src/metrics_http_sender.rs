@@ -32,7 +32,16 @@ pub struct EndpointDefined(String);
 pub struct MetricsHttpSender<T> {
     max_chunk_size: Option<usize>,
     send_frequency: Duration,
+    compression: Option<Compression>,
     endpoint: T,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Compression {
+    #[cfg(feature = "compress-zstd-external")]
+    Zstd { level: u8 },
+    #[cfg(feature = "compress-brotli")]
+    Brotli,
 }
 
 impl Default for MetricsHttpSender<EndpointUndefined> {
@@ -40,6 +49,7 @@ impl Default for MetricsHttpSender<EndpointUndefined> {
         Self {
             max_chunk_size: None,
             send_frequency: Duration::from_secs(15),
+            compression: None,
             endpoint: EndpointUndefined,
         }
     }
@@ -63,11 +73,18 @@ impl MetricsHttpSender<EndpointUndefined> {
         self
     }
 
+    /// Set the compression algorithm to use.
+    pub fn compression(mut self, compression: Option<Compression>) -> Self {
+        self.compression = compression;
+        self
+    }
+
     /// Set the endpoint for the metrics transport.
     pub fn endpoint(self, endpoint: impl ToString) -> MetricsHttpSender<EndpointDefined> {
         MetricsHttpSender {
             max_chunk_size: self.max_chunk_size,
             send_frequency: self.send_frequency,
+            compression: self.compression,
             endpoint: EndpointDefined(endpoint.to_string()),
         }
     }
@@ -86,11 +103,18 @@ impl MetricsHttpSender<EndpointDefined> {
         self
     }
 
+    /// Set the compression algorithm to use.
+    pub fn compression(mut self, compression: Option<Compression>) -> Self {
+        self.compression = compression;
+        self
+    }
+
     /// Start sending metrics to the endpoint specified. Returns a guard that will stop the transport when dropped.
     pub fn start_with(self, recorder: &WasmRecorder) -> DropGuard {
         let Self {
             max_chunk_size: buffer_size,
             send_frequency,
+            compression,
             endpoint: EndpointDefined(endpoint),
         } = self;
 
@@ -100,7 +124,7 @@ impl MetricsHttpSender<EndpointDefined> {
         wasm_bindgen_futures::spawn_local({
             let token = token.clone();
             async move {
-                run_transport(rx, token, endpoint, buffer_size, send_frequency).await;
+                run_transport(rx, token, endpoint, buffer_size, send_frequency, compression).await;
             }
         });
 
@@ -114,6 +138,7 @@ async fn run_transport(
     endpoint: String,
     buffer_size: Option<usize>,
     send_frequency: Duration,
+    compression: Option<Compression>,
 ) {
     use backoff::backoff::Backoff as _;
 
@@ -135,6 +160,7 @@ async fn run_transport(
             }]
             .into(),
             &endpoint,
+            compression,
         )
         .await
         {
@@ -174,7 +200,7 @@ async fn run_transport(
                     .build();
                 let events: Events = events.drain(..).collect::<Vec::<_>>().into();
                 loop {
-                    match post_metrics(Duration::from_secs(5), &events, &endpoint).await {
+                    match post_metrics(Duration::from_secs(5), &events, &endpoint, compression).await {
                         Ok(_) => break,
                         Err(err) => {
                             if let Some(backoff) = backoff.next_backoff() {
@@ -220,7 +246,12 @@ async fn run_transport(
     }
 }
 
-async fn post_metrics(timeout: Duration, events: &Events, endpoint: &str) -> std::io::Result<()> {
+async fn post_metrics(
+    timeout: Duration,
+    events: &Events,
+    endpoint: &str,
+    compression: Option<Compression>,
+) -> std::io::Result<()> {
     use gloo::net::http::{
         Headers,
         Method,
@@ -238,20 +269,19 @@ async fn post_metrics(timeout: Duration, events: &Events, endpoint: &str) -> std
     let headers = Headers::new();
     headers.set("content-type", "application/octet-stream");
 
-    let body = cfg_iif!(feature = "compress-zstd" {
-        use metrics_exporter_wasm_core::WasmMetricsEncodeZstd as _;
-        headers.set("Content-Encoding", "zstd");
-        events.encode().map_err(err)?
-    } else {
-        cfg_iif!(feature = "compress-brotli" {
-            use metrics_exporter_wasm_core::WasmMetricsEncodeBrotli as _;
-            headers.set("Content-Encoding", "br");
-            events.encode().map_err(err)?
-        } else {
-            use metrics_exporter_wasm_core::WasmMetricsEncode as _;
-            events.encode().map_err(err)?
-        })
-    });
+    let body = match compression {
+        #[cfg(feature = "compress-zstd-external")]
+        Some(Compression::Zstd { level }) => {
+            headers.set("content-encoding", "zstd");
+            events.encode_and_compress_zstd_external(level)?
+        }
+        #[cfg(feature = "compress-brotli")]
+        Some(Compression::Brotli) => {
+            headers.set("content-encoding", "br");
+            events.encode_and_compress_br()?
+        }
+        None => events.encode().map_err(err)?,
+    };
 
     let req = RequestBuilder::new(endpoint)
         .method(Method::POST)

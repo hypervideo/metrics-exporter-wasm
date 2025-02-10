@@ -53,6 +53,10 @@
             nodePackages_latest.live-server
             concurrently
             http-server
+
+            # for zstd-wasm
+            nodejs
+            emscripten
           ];
 
           RUST_BACKTRACE = "1";

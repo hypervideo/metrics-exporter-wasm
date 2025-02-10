@@ -23,20 +23,10 @@
     </div>
 
     <script type="module">
-        // See https://www.npmjs.com/package/@bokuweb/zstd-wasm documentation.
-        import { init, compress, decompress } from './zstd-wasm/index.web.js';
-
-        (async () => {
-          await init('./zstd-wasm/zstd.wasm');
-          window.zstd_compress = compress;
-        })();
-    </script>
-
-    <script type="module">
         import init, { setup, run_benchmarks, setup_metrics_test, run_metrics_test } from './dist/standalone_client.js';
         async function start() {
             await init();
-            setup();
+            await setup();
             setup_metrics_test();
         }
         start();

@@ -12,7 +12,8 @@ use axum::{
 use metrics_exporter_wasm_core::{
     Event,
     Events,
-    WasmMetricsDecode as _,
+    MetricOperation,
+    MetricType,
 };
 use std::{
     net::SocketAddr,
@@ -47,12 +48,16 @@ async fn metrics() -> impl IntoResponse {
     }
 }
 
-async fn receive_metrics(data: axum::body::Bytes) -> hyper::StatusCode {
+async fn receive_metrics(headers: axum::http::HeaderMap, data: axum::body::Bytes) -> hyper::StatusCode {
+    for (name, value) in headers {
+        debug!("header: {:?}={:?}", name, value);
+    }
+
     match Events::decode(&data) {
         Ok(events) => {
             let events: Vec<Event> = events.into();
+            info!(n = %events.len(), "received metrics");
             for event in events {
-                dbg!(&event);
                 match event {
                     Event::Description {
                         name,
@@ -60,13 +65,13 @@ async fn receive_metrics(data: axum::body::Bytes) -> hyper::StatusCode {
                         unit,
                         description,
                     } => match metric_type {
-                        metrics_exporter_wasm_core::MetricType::Counter => {
+                        MetricType::Counter => {
                             metrics::with_recorder(|recorder| recorder.describe_counter(name, unit, description));
                         }
-                        metrics_exporter_wasm_core::MetricType::Gauge => {
+                        MetricType::Gauge => {
                             metrics::with_recorder(|recorder| recorder.describe_gauge(name, unit, description));
                         }
-                        metrics_exporter_wasm_core::MetricType::Histogram => {
+                        MetricType::Histogram => {
                             metrics::with_recorder(|recorder| recorder.describe_histogram(name, unit, description));
                         }
                     },
@@ -78,26 +83,26 @@ async fn receive_metrics(data: axum::body::Bytes) -> hyper::StatusCode {
                         };
 
                         match op {
-                            metrics_exporter_wasm_core::MetricOperation::IncrementCounter(value) => {
+                            MetricOperation::IncrementCounter(value) => {
                                 metrics::with_recorder(|recorder| recorder.register_counter(&key, metadata))
                                     .increment(value);
                             }
-                            metrics_exporter_wasm_core::MetricOperation::SetCounter(value) => {
+                            MetricOperation::SetCounter(value) => {
                                 metrics::with_recorder(|recorder| recorder.register_counter(&key, metadata))
                                     .absolute(value);
                             }
-                            metrics_exporter_wasm_core::MetricOperation::IncrementGauge(value) => {
+                            MetricOperation::IncrementGauge(value) => {
                                 metrics::with_recorder(|recorder| recorder.register_gauge(&key, metadata))
                                     .increment(value);
                             }
-                            metrics_exporter_wasm_core::MetricOperation::DecrementGauge(value) => {
+                            MetricOperation::DecrementGauge(value) => {
                                 metrics::with_recorder(|recorder| recorder.register_gauge(&key, metadata))
                                     .decrement(value);
                             }
-                            metrics_exporter_wasm_core::MetricOperation::SetGauge(value) => {
+                            MetricOperation::SetGauge(value) => {
                                 metrics::with_recorder(|recorder| recorder.register_gauge(&key, metadata)).set(value);
                             }
-                            metrics_exporter_wasm_core::MetricOperation::RecordHistogram(value) => {
+                            MetricOperation::RecordHistogram(value) => {
                                 metrics::with_recorder(|recorder| recorder.register_histogram(&key, metadata))
                                     .record(value);
                             }

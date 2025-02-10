@@ -6,7 +6,7 @@ use tokio::sync::broadcast::error::RecvError;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn setup() {
+pub async fn setup() {
     console_error_panic_hook::set_once();
 
     // Register tracing subscriber.
@@ -19,6 +19,8 @@ pub fn setup() {
         }
         wasm_tracing::set_as_global_default_with_config(config).expect("Failed to set as global default");
     }
+
+    metrics_exporter_wasm::zstd_external::initialize().await;
 
     tracing::info!("tracing setup complete");
 }

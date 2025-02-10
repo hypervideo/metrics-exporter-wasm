@@ -24,9 +24,9 @@
         import init, { setup, run } from './dist/client.js';
         async function start() {
             await init();
-            setup("/receive-metrics");
+            await setup();
         }
-        start();
+        await start();
 
         window.run = run;
     </script>

@@ -9,13 +9,14 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 console_error_panic_hook = "0.1.7"
 metrics = { version = "0.24.1" }
-metrics-exporter-wasm = { path = "../..", features = ["compress-zstd", "compress-brotli"] }
+metrics-exporter-wasm = { path = "../..", features = ["compress-zstd-external", "compress-brotli"] }
 metrics-util = "0.19.0"
 tokio = "1.43.0"
 tracing = { version = "0.1.0", default-features = false }
 wasm-bindgen = { version = "0.2.100", default-features = false }
 wasm-bindgen-futures = "0.4.49"
 wasm-tracing = { git = "https://github.com/hypervideo/wasm-tracing", rev = "351a117449b51cdbf2b7c51386fe999a37a7efe7" }
+web-sys = "0.3.77"
 
 # to fix:
 #   error: the wasm*-unknown-unknown targets are not supported by default, you may need to enable the "js" feature. For more information see: https://docs.rs/getrandom/#webassembly-support

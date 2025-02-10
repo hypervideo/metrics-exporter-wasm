@@ -18,7 +18,6 @@ repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
 backoff = { version = "0.4.0", features = ["wasm-bindgen", "futures"] }
-cfg-iif = "0.2.7"
 futures = "0.3.31"
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
 metrics = { version = "0.24.1" }
@@ -39,7 +38,6 @@ default-features = false
 features = ["macros", "model"]
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-# root
 
 [package]
 name = "metrics-exporter-wasm"
@@ -52,7 +50,6 @@ description = "A metrics-compatible exporter meant for browser WASM applications
 
 [dependencies]
 backoff.workspace = true
-cfg-iif.workspace = true
 futures.workspace = true
 gloo.workspace = true
 metrics.workspace = true
@@ -64,12 +61,16 @@ tracing.workspace = true
 wasm-bindgen-futures.workspace = true
 wasmtimer.workspace = true
 web-sys.workspace = true
+web-sys.features = ["console"]
 
 [features]
-default = []
+default = ["compress-zstd-external"]
+# Utilities to debug ASN.1. Only useful for development.
 asn-debug = ["metrics-exporter-wasm-core/asn-debug"]
+# Support for metrics compression with brotli. Uses the `brotli` crate.
 compress-brotli = ["metrics-exporter-wasm-core/compress-brotli"]
-compress-zstd = ["metrics-exporter-wasm-core/compress-zstd"]
+# Support for metrics compression with zstd. This requires to have an externally installed function `fn zstd_compress(buf: Uint8Array, level: u32) -> Uint8Array;` # available! Use e.g. https://www.npmjs.com/package/@bokuweb/zstd-wasm
+compress-zstd-external = ["metrics-exporter-wasm-core/compress-zstd-external"]
 
 [profile.release-with-debug]
 inherits = "release"

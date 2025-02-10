@@ -16,7 +16,6 @@ pub fn run() {
 const N: u64 = 1000;
 
 fn asn_serialization() {
-    use metrics_exporter_wasm::WasmMetricsEncode as _;
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         let result = bench_env(data.clone(), move |events| {
             Events::from(events).encode().expect("failed to serialize events")
@@ -27,33 +26,51 @@ fn asn_serialization() {
 }
 
 fn asn_serialization_brotli() {
-    use metrics_exporter_wasm::WasmMetricsEncodeBrotli as _;
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         let result = bench_env(data.clone(), move |events| {
-            Events::from(events).encode().expect("failed to serialize events")
+            Events::from(events)
+                .encode_and_compress_br()
+                .expect("failed to serialize events")
         });
-        let size = Events::from(data).encode().unwrap().len();
+        let size = Events::from(data).encode_and_compress_br().unwrap().len();
         tracing::info!("| asn1rs serialize brotli {i} | {result} | {size}B");
     }
 }
 
 fn asn_serialization_zstd() {
-    use metrics_exporter_wasm::WasmMetricsEncodeZstd as _;
+    const COMPRESSION_LEVEL: u8 = 3;
+
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         let result = bench_env(data.clone(), move |events| {
-            Events::from(events).encode().expect("failed to serialize events")
+            Events::from(events)
+                .encode_and_compress_zstd_external(3)
+                .expect("failed to serialize events")
         });
-        let size = Events::from(data).encode().unwrap().len();
+        let size = Events::from(data.clone())
+            .encode_and_compress_zstd_external(COMPRESSION_LEVEL)
+            .unwrap()
+            .len();
         tracing::info!("| asn1rs serialize zstd {i} | {result} | {size}B");
+
+        let compressed = Events::from(data)
+            .encode_and_compress_zstd_external(COMPRESSION_LEVEL)
+            .unwrap();
+        let result = bench_env(compressed, move |compressed| {
+            use wasm_bindgen::prelude::*;
+            use web_sys::js_sys::Uint8Array;
+            #[wasm_bindgen]
+            extern "C" {
+                #[wasm_bindgen(js_namespace = zstd)]
+                fn decompress(buf: Uint8Array) -> Uint8Array;
+            }
+            let decompressed = decompress(Uint8Array::from(compressed.as_slice()));
+            Events::decode(&decompressed.to_vec()).unwrap()
+        });
+        tracing::info!("| asn1rs roundtrip zstd {i} | {result}");
     }
 }
 
 fn asn_deserialization() {
-    use metrics_exporter_wasm::{
-        WasmMetricsDecode as _,
-        WasmMetricsEncode as _,
-    };
-
     for (i, data) in [(1, events_1(N)), (2, events_2(N))] {
         {
             let data = Events::from(data.clone()).encode().unwrap();

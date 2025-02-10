@@ -1,4 +1,5 @@
 use metrics_exporter_wasm::{
+    Compression,
     MetricsHttpSender,
     WasmRecorder,
 };
@@ -6,8 +7,9 @@ use std::time::Duration;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn setup(endpoint: &str) {
+pub async fn setup() {
     console_error_panic_hook::set_once();
+    metrics_exporter_wasm::zstd_external::initialize().await;
 
     // Register tracing subscriber.
     {
@@ -25,9 +27,11 @@ pub fn setup(endpoint: &str) {
         .build()
         .expect("failed to create recorder");
 
+    const ENDPOINT: &str = "/receive-metrics";
     let guard = MetricsHttpSender::new()
-        .endpoint(endpoint.to_string())
+        .endpoint(ENDPOINT)
         .send_frequency(Duration::from_secs(1))
+        .compression(Some(Compression::Zstd { level: 3 }))
         .start_with(&recorder);
 
     // Run forever

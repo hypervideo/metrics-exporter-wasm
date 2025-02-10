@@ -9,7 +9,9 @@ repository.workspace = true
 asn1rs.workspace = true
 brotli = { version = "7.0.0", optional = true }
 metrics.workspace = true
+tracing.workspace = true
 wasm-bindgen.workspace = true
+wasm-bindgen-futures = { workspace = true, optional = true }
 web-sys.workspace = true
 
 [build-dependencies]
@@ -17,6 +19,10 @@ asn1rs.workspace = true
 
 [features]
 default = []
+# Provide brotli support using the `brotli` crate.
 compress-brotli = ["dep:brotli"]
-compress-zstd = []
+# Provide zstd support, package [zstd-wasm](https://github.com/bokuweb/zstd-wasm).
+compress-zstd-external = ["dep:wasm-bindgen-futures"]
+# Rebuild zstd-wasm from source.
+compress-zstd-external-from-source = []
 asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]
