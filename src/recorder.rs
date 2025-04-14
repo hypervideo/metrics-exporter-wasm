@@ -99,9 +99,13 @@ impl WasmRecorderBuilder {
 }
 
 /// A metrics recorder for use in WASM environments.
+#[derive(Clone)]
 pub struct WasmRecorder {
     state: Arc<State>,
 }
+
+static GLOBAL_RECORDER: std::sync::LazyLock<std::sync::Mutex<Option<WasmRecorder>>> =
+    std::sync::LazyLock::new(Default::default);
 
 impl WasmRecorder {
     /// Create a new builder for a [`WasmRecorder`].
@@ -116,7 +120,15 @@ impl WasmRecorder {
 
     /// Install this recorder as the global recorder.
     pub fn install(self) -> Result<(), SetRecorderError<Self>> {
+        GLOBAL_RECORDER
+            .lock()
+            .expect("global recorder lock")
+            .replace(self.clone());
         metrics::set_global_recorder(self)
+    }
+
+    pub fn global() -> Option<Self> {
+        GLOBAL_RECORDER.lock().expect("global recorder lock").clone()
     }
 }
 
