@@ -10,6 +10,7 @@ use metrics::{
 };
 use metrics_exporter_wasm_core::{
     util_time,
+    Asn1Encode,
     RecordedEvent,
     RecordedEvents,
 };
@@ -248,7 +249,7 @@ async fn run_transport(
 
 async fn post_metrics(
     timeout: Duration,
-    events: &RecordedEvents,
+    events: &impl Asn1Encode,
     endpoint: &str,
     compression: Option<Compression>,
 ) -> std::io::Result<()> {

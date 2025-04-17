@@ -7,6 +7,8 @@ pub mod util_time;
 pub mod zstd_external;
 
 pub use asn::{
+    Asn1Decode,
+    Asn1Encode,
     Error,
     Events,
     RecordedEvents,

@@ -16,6 +16,8 @@ mod recorder;
 #[cfg(feature = "compress-zstd-external")]
 pub use metrics_exporter_wasm_core::zstd_external;
 pub use metrics_exporter_wasm_core::{
+    Asn1Decode,
+    Asn1Encode,
     Event,
     Events,
     MetricOperation,

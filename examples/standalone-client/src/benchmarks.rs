@@ -2,6 +2,8 @@
 
 use crate::util::benchmark::bench_env;
 use metrics_exporter_wasm::{
+    Asn1Decode,
+    Asn1Encode,
     Event,
     Events,
     MetricOperation,
