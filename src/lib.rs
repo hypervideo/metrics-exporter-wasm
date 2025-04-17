@@ -9,6 +9,9 @@
 //! - Metrics can be send to a remote server. In this case, [asn1](https://github.com/kellerkindt/asn1rs) is used to
 //!   encode the metrics into a space efficient binary format. The encoded metrics are then batched and send with POST
 //!   requests to the specified server URL.
+//!
+//! Unlike normal metrics, the metrics that metrics-wasm-exporter exports also carry a timestamp of when the metric was
+//! originally recorded.
 
 mod metrics_http_sender;
 mod recorder;
