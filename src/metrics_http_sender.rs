@@ -227,9 +227,7 @@ async fn run_transport(
 
                     Ok(event) => {
                         if buffer_size.is_some_and(|buffer_size| events.len() >= buffer_size) {
-                            // TODO(rk) 2025-02-09: while hyper is behind the current rust version
-                            #[allow(clippy::unnecessary_map_or)]
-                            if last_warning.map_or(true,|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
+                            if last_warning.is_none_or(|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
                                 warn!("metrics chunk size exceeded, dropping metrics");
                                 last_warning = Some(Instant::now());
                             }
