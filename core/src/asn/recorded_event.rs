@@ -7,7 +7,6 @@ use crate::{
     util_time,
     Event,
     RecordedEvent,
-    RecordedEvents,
 };
 use asn1rs::prelude::*;
 use chrono::prelude::*;
@@ -39,14 +38,34 @@ impl From<Event> for RecordedEvent {
     }
 }
 
-impl RecordedEvents {
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+impl generated::RecordedEvents {
+    pub fn new(batch_start_time: DateTime<Utc>, events: Vec<RecordedEvent>) -> Self {
+        let unix_epoch = Utc.timestamp_opt(0, 0).unwrap();
+        let duration = batch_start_time
+            .signed_duration_since(unix_epoch)
+            .to_std()
+            .unwrap_or_default();
+        let recording_started_at = generated::Timestamp {
+            seconds: duration.as_secs(),
+            nanos: duration.subsec_nanos(),
+        };
+
+        Self {
+            recording_started_at,
+            events: events
+                .into_iter()
+                .map(|event| event.into_asn_with_base_time(batch_start_time))
+                .collect(),
+        }
+    }
+
     /// Serialize the events using asn1.
     pub fn encode(&self) -> Result<Vec<u8>> {
-        // TODO: can we do without clone here?
-        let recorded_events = generated::RecordedEvents::from(self.clone());
         let mut writer = UperWriter::default();
         writer
-            .write(&recorded_events)
+            .write(self)
             .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))?;
         Ok(writer.into_bytes_vec())
     }
@@ -54,10 +73,9 @@ impl RecordedEvents {
     /// Deserialize from asn1.
     pub fn decode(data: &[u8]) -> Result<Self> {
         let mut reader = UperReader::from(Bits::from(data));
-        let recored_events = reader
+        reader
             .read::<generated::RecordedEvents>()
-            .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))?;
-        Ok(Self::from(recored_events))
+            .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
     #[cfg(feature = "compress-brotli")]
@@ -95,31 +113,7 @@ impl RecordedEvents {
     }
 }
 
-impl From<RecordedEvents> for generated::RecordedEvents {
-    fn from(value: RecordedEvents) -> Self {
-        let RecordedEvents {
-            recording_started_at: base_time,
-            events,
-        } = value;
-
-        let unix_epoch = Utc.timestamp_opt(0, 0).unwrap();
-        let duration = base_time.signed_duration_since(unix_epoch).to_std().unwrap_or_default();
-        let recording_started_at = generated::Timestamp {
-            seconds: duration.as_secs(),
-            nanos: duration.subsec_nanos(),
-        };
-
-        Self {
-            recording_started_at,
-            events: events
-                .into_iter()
-                .map(|event| event.into_asn_with_base_time(base_time))
-                .collect(),
-        }
-    }
-}
-
-impl From<generated::RecordedEvents> for RecordedEvents {
+impl From<generated::RecordedEvents> for Vec<RecordedEvent> {
     fn from(value: generated::RecordedEvents) -> Self {
         let generated::RecordedEvents {
             recording_started_at,
@@ -131,26 +125,20 @@ impl From<generated::RecordedEvents> for RecordedEvents {
         let unix_epoch = Utc.timestamp_opt(0, 0).unwrap();
         let recording_started_at = unix_epoch + duration;
 
-        Self {
-            recording_started_at,
-            events: events
-                .into_iter()
-                .map(|event| RecordedEvent::from_asn_with_base_time(event, recording_started_at))
-                .collect(),
-        }
+        events
+            .into_iter()
+            .map(|event| RecordedEvent::from_asn_with_base_time(event, recording_started_at))
+            .collect()
     }
 }
 
-impl From<Vec<Event>> for RecordedEvents {
+impl From<Vec<Event>> for generated::RecordedEvents {
     fn from(events: Vec<Event>) -> Self {
         let now = util_time::now();
         let events = events
             .into_iter()
             .map(|event| RecordedEvent { event, timestamp: now })
             .collect();
-        Self {
-            recording_started_at: now,
-            events,
-        }
+        Self::new(now, events)
     }
 }

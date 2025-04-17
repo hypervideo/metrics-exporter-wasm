@@ -9,6 +9,7 @@ pub mod zstd_external;
 pub use asn::{
     Error,
     Events,
+    RecordedEvents,
     Result,
 };
 pub use event::{
@@ -16,5 +17,4 @@ pub use event::{
     MetricOperation,
     MetricType,
     RecordedEvent,
-    RecordedEvents,
 };

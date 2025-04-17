@@ -5,7 +5,10 @@ mod metric_type;
 mod recorded_event;
 mod unit;
 
-pub use generated::Events;
+pub use generated::{
+    Events,
+    RecordedEvents,
+};
 
 mod generated {
     include!(concat!(env!("OUT_DIR"), "/metrics.rs"));
