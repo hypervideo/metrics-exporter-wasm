@@ -16,6 +16,15 @@ pub struct RecordedEvents {
     pub events: Vec<RecordedEvent>,
 }
 
+impl RecordedEvents {
+    pub fn new(recording_started_at: DateTime<Utc>, events: Vec<RecordedEvent>) -> Self {
+        Self {
+            recording_started_at,
+            events,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordedEvent {
     pub timestamp: DateTime<Utc>,

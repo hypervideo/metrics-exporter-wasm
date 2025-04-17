@@ -20,6 +20,8 @@ pub use metrics_exporter_wasm_core::{
     Events,
     MetricOperation,
     MetricType,
+    RecordedEvent,
+    RecordedEvents,
 };
 pub use metrics_http_sender::{
     Compression,

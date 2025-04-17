@@ -173,6 +173,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
+name = "chrono"
+version = "0.4.40"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a7964611d71df112cb1730f2ee67324fcf4d0fc6606acbbe9bfe06df124637c"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "codegen"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -519,6 +528,7 @@ name = "metrics-exporter-wasm"
 version = "0.1.0"
 dependencies = [
  "backoff",
+ "chrono",
  "futures",
  "gloo",
  "metrics",
@@ -538,10 +548,12 @@ version = "0.1.0"
 dependencies = [
  "asn1rs",
  "brotli",
+ "chrono",
  "metrics",
  "tracing",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasmtimer",
  "web-sys",
 ]
 
