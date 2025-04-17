@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use metrics::{
     Key,
     KeyName,
@@ -8,6 +9,18 @@ use metrics::{
 // These types are "public" interface. The asn1 generated types are a bit more
 // complex, to simplify, we provide these representations that can be converted
 // back and forth.
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordedEvents {
+    pub recording_started_at: DateTime<Utc>,
+    pub events: Vec<RecordedEvent>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordedEvent {
+    pub timestamp: DateTime<Utc>,
+    pub event: Event,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {

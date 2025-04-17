@@ -2,6 +2,7 @@ mod event;
 mod events;
 mod metric_operation;
 mod metric_type;
+mod recorded_event;
 mod unit;
 
 pub use generated::Events;

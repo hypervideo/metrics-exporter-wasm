@@ -1,6 +1,26 @@
 Metrics DEFINITIONS AUTOMATIC TAGS ::=
 
 BEGIN
+    Timestamp ::= SEQUENCE {
+        seconds INTEGER (0..9223372036854775807), -- u64
+        nanos INTEGER (0..4294967295) -- u32
+    }
+
+    -- Metric events that get batched up. We record the start time of the batch
+    -- in addition to the list of events. The events themselves are sorted by
+    -- the time the exporter has received them.
+    RecordedEvents ::= SEQUENCE {
+        recording_started_at Timestamp,
+        events               SEQUENCE OF RecordedEvent
+    }
+
+    -- Represents one metrics event in RecordedEvents. offset_ms is the time in
+    -- milliseconds since recording_started_at.
+    RecordedEvent ::= SEQUENCE {
+        offset_ms INTEGER (0..4294967295), -- u32
+        event     Event
+    }
+
     Events ::= SEQUENCE OF Event
 
     Event ::= CHOICE {

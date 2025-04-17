@@ -14,4 +14,6 @@ pub use event::{
     Event,
     MetricOperation,
     MetricType,
+    RecordedEvent,
+    RecordedEvents,
 };
