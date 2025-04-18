@@ -11,7 +11,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Robert Krahn <robert@hyper.video>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -23,7 +23,7 @@ chrono = { version = "0.4.40", default-features = false, features = ["now"] }
 futures = { version = "0.3.31", default-features = false }
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
 metrics = { version = "0.24.1" }
-metrics-exporter-wasm-core = { path = "./core", version = "0.2.0" }
+metrics-exporter-wasm-core = { path = "./core", version = "0.2.1" }
 scopeguard = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.43.0", default-features = false, features = ["sync", "macros"] }
@@ -44,7 +44,7 @@ features = ["macros", "model"]
 
 [package]
 name = "metrics-exporter-wasm"
-version = "0.2.0"
+version = "0.2.1"
 authors.workspace = true
 categories = ["development-tools::debugging"]
 edition.workspace = true
