@@ -11,14 +11,15 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Robert Krahn <robert@hyper.video>"]
 edition = "2021"
 repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
-backoff = { version = "0.4.0", features = ["wasm-bindgen", "futures"] }
-futures = "0.3.31"
+backoff = { git = "https://github.com/hypervideo/backoff", rev = "81cfb7082db35b943b22449ea27adc2c3fa4cbed", features = ["futures"] }
+chrono = { version = "0.4.40", default-features = false, features = ["now"] }
+futures = { version = "0.3.31", default-features = false }
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
 metrics = { version = "0.24.1" }
 metrics-exporter-wasm-core.path = "./core"
@@ -50,6 +51,7 @@ description = "A metrics-compatible exporter meant for browser WASM applications
 
 [dependencies]
 backoff.workspace = true
+chrono.workspace = true
 futures.workspace = true
 gloo.workspace = true
 metrics.workspace = true
@@ -60,11 +62,11 @@ tokio-util.workspace = true
 tracing.workspace = true
 wasm-bindgen-futures.workspace = true
 wasmtimer.workspace = true
-web-sys.workspace = true
 web-sys.features = ["console"]
+web-sys.workspace = true
 
 [features]
-default = ["compress-zstd-external"]
+default = []
 # Utilities to debug ASN.1. Only useful for development.
 asn-debug = ["metrics-exporter-wasm-core/asn-debug"]
 # Support for metrics compression with brotli. Uses the `brotli` crate.

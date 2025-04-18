@@ -10,10 +10,12 @@ use axum::{
     Router,
 };
 use metrics_exporter_wasm_core::{
+    Asn1Decode as _,
     Event,
-    Events,
     MetricOperation,
     MetricType,
+    RecordedEvent,
+    RecordedEvents,
 };
 use std::{
     net::SocketAddr,
@@ -53,11 +55,12 @@ async fn receive_metrics(headers: axum::http::HeaderMap, data: axum::body::Bytes
         debug!("header: {:?}={:?}", name, value);
     }
 
-    match Events::decode(&data) {
+    match RecordedEvents::decode(&data) {
         Ok(events) => {
-            let events: Vec<Event> = events.into();
+            let events: Vec<RecordedEvent> = events.into();
             info!(n = %events.len(), "received metrics");
-            for event in events {
+            for RecordedEvent { timestamp, event } in events {
+                debug!(timestamp = %timestamp, "event");
                 match event {
                     Event::Description {
                         name,

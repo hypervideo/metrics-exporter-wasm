@@ -12,8 +12,8 @@ futures = "0.3.31"
 hyper = "1.6.0"
 metrics = { version = "0.24.1" }
 metrics-exporter-wasm-core = { path = "../../../core" }
-metrics-prometheus = "0.9.0"
-prometheus = "0.13.4"
+metrics-prometheus = "0.10.0"
+prometheus = "0.14.0"
 tokio = { version = "1.43.0", features = ["time", "signal", "macros"] }
 tower.version = "0.5.2"
 tower-http = { version = "0.6.2", features = ["fs", "decompression-br", "decompression-zstd"] }

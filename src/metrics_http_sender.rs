@@ -1,6 +1,5 @@
 use crate::{
     Event,
-    Events,
     MetricOperation,
     MetricType,
     WasmRecorder,
@@ -8,6 +7,12 @@ use crate::{
 use metrics::{
     Key,
     KeyName,
+};
+use metrics_exporter_wasm_core::{
+    util_time,
+    Asn1Encode,
+    RecordedEvent,
+    RecordedEvents,
 };
 use std::{
     collections::VecDeque,
@@ -150,20 +155,14 @@ async fn run_transport(
     // Initial connection, send internal metadata
     {
         let mut backoff = backoff::ExponentialBackoff::default();
-        while let Err(err) = post_metrics(
-            Duration::from_secs(5),
-            &vec![Event::Description {
-                name: KeyName::from_const_str("metrics_processed"),
-                metric_type: MetricType::Counter,
-                unit: None,
-                description: "metrics-exporter-wasm internal counter".into(),
-            }]
-            .into(),
-            &endpoint,
-            compression,
-        )
-        .await
-        {
+
+        let metrics_processed = RecordedEvents::from(vec![Event::Description {
+            name: KeyName::from_const_str("metrics_processed"),
+            metric_type: MetricType::Counter,
+            unit: None,
+            description: "metrics-exporter-wasm internal counter".into(),
+        }]);
+        while let Err(err) = post_metrics(Duration::from_secs(5), &metrics_processed, &endpoint, compression).await {
             error!(?err, "failed to send initial metadata");
             if let Some(backoff) = backoff.next_backoff() {
                 sleep(backoff).await;
@@ -172,6 +171,7 @@ async fn run_transport(
     }
 
     // Time-batched metrics transport
+    let mut batch_start_time = util_time::now();
     let mut time_to_send: Option<wasmtimer::tokio::Sleep> = None;
     let mut events = VecDeque::new();
     let mut last_warning = None::<Instant>;
@@ -193,15 +193,18 @@ async fn run_transport(
                 let n = events.len();
                 trace!(%n, "sending metrics");
                 time_to_send = None;
-                events.push_back(Event::Metric { key: Key::from_static_name("metrics_processed"), op: MetricOperation::IncrementCounter(events.len() as _) });
+                events.push_back(RecordedEvent::from(Event::Metric { key: Key::from_static_name("metrics_processed"), op: MetricOperation::IncrementCounter(events.len() as _) }));
 
                 let mut backoff = backoff::ExponentialBackoffBuilder::new()
                     .with_max_elapsed_time(Some(Duration::from_secs(60)))
                     .build();
-                let events: Events = events.drain(..).collect::<Vec::<_>>().into();
+                let recorded_events = RecordedEvents::new(batch_start_time, events.drain(..).collect());
                 loop {
-                    match post_metrics(Duration::from_secs(5), &events, &endpoint, compression).await {
-                        Ok(_) => break,
+                    match post_metrics(Duration::from_secs(5), &recorded_events, &endpoint, compression).await {
+                        Ok(_) => {
+                            batch_start_time = util_time::now();
+                            break
+                        },
                         Err(err) => {
                             if let Some(backoff) = backoff.next_backoff() {
                                 warn!(?err, "failed to send metrics, retrying in {backoff:?}");
@@ -227,15 +230,13 @@ async fn run_transport(
 
                     Ok(event) => {
                         if buffer_size.is_some_and(|buffer_size| events.len() >= buffer_size) {
-                            // TODO(rk) 2025-02-09: while hyper is behind the current rust version
-                            #[allow(clippy::unnecessary_map_or)]
-                            if last_warning.map_or(true,|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
+                            if last_warning.is_none_or(|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
                                 warn!("metrics chunk size exceeded, dropping metrics");
                                 last_warning = Some(Instant::now());
                             }
                             events.pop_front();
                         };
-                        events.push_back(event);
+                        events.push_back(RecordedEvent::from(event));
                         if time_to_send.is_none() {
                             time_to_send = Some(sleep(send_frequency));
                         }
@@ -248,7 +249,7 @@ async fn run_transport(
 
 async fn post_metrics(
     timeout: Duration,
-    events: &Events,
+    events: &impl Asn1Encode,
     endpoint: &str,
     compression: Option<Compression>,
 ) -> std::io::Result<()> {

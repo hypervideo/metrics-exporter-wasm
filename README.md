@@ -12,4 +12,7 @@ Metrics can be transferred in two ways:
   encode the metrics into a space efficient binary format. The encoded metrics are then batched and send with POST
   requests to the specified server URL.
 
+Unlike normal metrics, the metrics that metrics-wasm-exporter exports also carry a timestamp of when the metric was
+originally recorded.
+
 <!-- cargo-rdme end -->
