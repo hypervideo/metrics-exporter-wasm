@@ -11,6 +11,7 @@ asn1rs.workspace = true
 brotli = { version = "7.0.0", optional = true }
 chrono.workspace = true
 metrics.workspace = true
+serde = { workspace = true, optional = true }
 tracing.workspace = true
 wasm-bindgen.workspace = true
 wasm-bindgen-futures = { workspace = true, optional = true }
@@ -34,3 +35,4 @@ compress-zstd-external = ["dep:wasm-bindgen-futures"]
 # Rebuild zstd-wasm from source.
 compress-zstd-external-from-source = []
 asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]
+serde = ["dep:serde", "chrono/serde"]

@@ -25,6 +25,7 @@ gloo = { version = "0.11.0", default-features = false, features = ["net"] }
 metrics = { version = "0.24.1" }
 metrics-exporter-wasm-core = { path = "./core", version = "0.2.0" }
 scopeguard = "1.2.0"
+serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.43.0", default-features = false, features = ["sync", "macros"] }
 tokio-util = { version = "0.7.13", default-features = false, features = ["futures-util"] }
 tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
@@ -76,6 +77,8 @@ asn-debug = ["metrics-exporter-wasm-core/asn-debug"]
 compress-brotli = ["metrics-exporter-wasm-core/compress-brotli"]
 # Support for metrics compression with zstd. This requires to have an externally installed function `fn zstd_compress(buf: Uint8Array, level: u32) -> Uint8Array;` # available! Use e.g. https://www.npmjs.com/package/@bokuweb/zstd-wasm
 compress-zstd-external = ["metrics-exporter-wasm-core/compress-zstd-external"]
+# Adds serde::Serialize and serde::Deserialize to all types
+serde = ["metrics-exporter-wasm-core/serde"]
 
 [profile.release-with-debug]
 inherits = "release"

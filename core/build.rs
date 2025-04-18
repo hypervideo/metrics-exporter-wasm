@@ -26,10 +26,16 @@ fn generate_asn1_types() {
     }
 
     let out_dir = PathBuf::from(var("OUT_DIR").unwrap());
-    if let Err(error) = converter.to_rust(out_dir.to_str().unwrap(), |_generator: &mut RustCodeGenerator| {
-        // generator.add_global_derive("serde::Serialize");
-        // generator.add_global_derive("serde::Deserialize");
-    }) {
+    if let Err(error) = converter.to_rust(
+        out_dir.to_str().unwrap(),
+        |#[allow(unused)] generator: &mut RustCodeGenerator| {
+            #[cfg(feature = "serde")]
+            {
+                generator.add_global_derive("serde::Serialize");
+                generator.add_global_derive("serde::Deserialize");
+            }
+        },
+    ) {
         panic!("Conversion to rust failed: {:?}", error);
     }
 }

@@ -11,6 +11,7 @@ use metrics::{
 // back and forth.
 
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RecordedEvent {
     pub timestamp: DateTime<Utc>,
     pub event: Event,
@@ -32,6 +33,7 @@ pub enum Event {
 
 /// The metric type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MetricType {
     /// A counter is a cumulative metric that represents a single monotonically
     /// increasing counter whose value can only increase or be reset to zero on
@@ -51,6 +53,7 @@ pub enum MetricType {
 
 /// Describes what the metric operation does.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum MetricOperation {
     /// Increment a counter by a given value.
     IncrementCounter(u64),
@@ -64,4 +67,116 @@ pub enum MetricOperation {
     SetGauge(f64),
     /// Record a histogram value.
     RecordHistogram(f64),
+}
+
+#[cfg(feature = "serde")]
+mod serialization_helper {
+    use serde::{
+        Deserialize,
+        Serialize,
+    };
+
+    impl Serialize for super::Event {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let other = Event::from(self);
+            other.serialize(serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for super::Event {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let other = Event::deserialize(deserializer)?;
+            Ok(super::Event::from(other))
+        }
+    }
+
+    impl From<&super::Event> for Event {
+        fn from(event: &super::Event) -> Self {
+            match event {
+                super::Event::Description {
+                    name,
+                    metric_type,
+                    unit,
+                    description,
+                } => Event::Description {
+                    name: name.as_str().to_owned(),
+                    metric_type: *metric_type,
+                    unit: unit.map(|u| u.as_str().to_owned()),
+                    description: description.to_string(),
+                },
+                super::Event::Metric { key, op } => Event::Metric {
+                    key: Key {
+                        name: key.name().to_string(),
+                        labels: key
+                            .labels()
+                            .map(|label| (label.key().to_string(), label.value().to_string()))
+                            .collect(),
+                    },
+                    op: *op,
+                },
+            }
+        }
+    }
+
+    impl From<Event> for super::Event {
+        fn from(event: Event) -> Self {
+            use metrics::{
+                Key,
+                KeyName,
+                Label,
+                SharedString,
+                Unit,
+            };
+
+            match event {
+                Event::Description {
+                    name,
+                    metric_type,
+                    unit,
+                    description,
+                } => super::Event::Description {
+                    name: KeyName::from(name),
+                    metric_type,
+                    unit: unit.as_deref().and_then(Unit::from_string),
+                    description: SharedString::from(description),
+                },
+                Event::Metric { key, op } => super::Event::Metric {
+                    key: Key::from_parts(
+                        key.name,
+                        key.labels
+                            .into_iter()
+                            .map(|(k, v)| Label::new(SharedString::from(k), SharedString::from(v)))
+                            .collect::<Vec<_>>(),
+                    ),
+                    op,
+                },
+            }
+        }
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub enum Event {
+        Description {
+            name: String,
+            metric_type: super::MetricType,
+            unit: Option<String>,
+            description: String,
+        },
+        Metric {
+            key: Key,
+            op: super::MetricOperation,
+        },
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct Key {
+        name: String,
+        labels: Vec<(String, String)>,
+    }
 }
