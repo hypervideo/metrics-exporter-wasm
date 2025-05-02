@@ -24,7 +24,7 @@ print-wasm-size: build
     du -b ./target/wasm32-unknown-unknown/release/*.wasm | numfmt --to=iec-i --format="%3.5f"
     cd examples/server-and-client/client && just print-wasm-size
 
-check: test
+lint:
     cargo hack clippy --feature-powerset -- -D warnings
 
 test:

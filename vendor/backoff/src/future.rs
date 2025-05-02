@@ -1,16 +1,21 @@
+#[cfg(any(feature = "tokio", feature = "async-std"))]
+use crate::retry::NoopNotify;
+use crate::{
+    backoff::Backoff,
+    error::Error,
+    retry::Notify,
+};
+use futures_core::ready;
+use pin_project_lite::pin_project;
 use std::{
     future::Future,
     pin::Pin,
-    task::{Context, Poll},
+    task::{
+        Context,
+        Poll,
+    },
     time::Duration,
 };
-
-use futures_core::ready;
-use pin_project_lite::pin_project;
-
-use crate::{backoff::Backoff, error::Error};
-
-use crate::retry::{NoopNotify, Notify};
 
 pub trait Sleeper {
     type Sleep: Future<Output = ()> + Send + 'static;
@@ -39,10 +44,7 @@ pub trait Sleeper {
 /// # fn main() { futures_executor::block_on(go()); }
 /// ```
 #[cfg(any(feature = "tokio", feature = "async-std"))]
-pub fn retry<I, E, Fn, Fut, B>(
-    backoff: B,
-    operation: Fn,
-) -> Retry<impl Sleeper, B, NoopNotify, Fn, Fut>
+pub fn retry<I, E, Fn, Fut, B>(backoff: B, operation: Fn) -> Retry<impl Sleeper, B, NoopNotify, Fn, Fut>
 where
     B: Backoff,
     Fn: FnMut() -> Fut,
@@ -90,11 +92,7 @@ where
 /// # fn main() { futures_executor::block_on(go()); }
 /// ```
 #[cfg(any(feature = "tokio", feature = "async-std"))]
-pub fn retry_notify<I, E, Fn, Fut, B, N>(
-    mut backoff: B,
-    operation: Fn,
-    notify: N,
-) -> Retry<impl Sleeper, B, N, Fn, Fut>
+pub fn retry_notify<I, E, Fn, Fut, B, N>(mut backoff: B, operation: Fn, notify: N) -> Retry<impl Sleeper, B, N, Fn, Fut>
 where
     B: Backoff,
     Fn: FnMut() -> Fut,
