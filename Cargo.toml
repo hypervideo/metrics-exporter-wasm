@@ -8,6 +8,7 @@ exclude = [
   "examples/server-and-client/server",
   "examples/zstd-example",
   "examples/standalone-client",
+  "vendor/backoff",
 ]
 
 [workspace.package]
@@ -18,7 +19,7 @@ license = "MPL-2.0"
 repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
-backoff = { version = "0.4.1", git = "https://github.com/hypervideo/backoff", rev = "81cfb7082db35b943b22449ea27adc2c3fa4cbed", features = ["futures"] }
+backoff = { path = "./vendor/backoff", features = ["futures"] }
 chrono = { version = "0.4.40", default-features = false, features = ["now"] }
 futures = { version = "0.3.31", default-features = false }
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
