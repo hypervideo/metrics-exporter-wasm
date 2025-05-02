@@ -25,13 +25,10 @@ print-wasm-size: build
     cd examples/server-and-client/client && just print-wasm-size
 
 check: test
-    cargo clippy -p metrics-exporter-wasm --target wasm32-unknown-unknown -- -D warnings
-    cargo clippy -p metrics-exporter-wasm --features compress-zstd-external --target wasm32-unknown-unknown -- -D warnings
-    cargo clippy -p metrics-exporter-wasm --features compress-brotli --target wasm32-unknown-unknown -- -D warnings
-    cargo clippy -p metrics-exporter-wasm-core --features serde --target wasm32-unknown-unknown -- -D warnings
+    cargo hack clippy --feature-powerset -- -D warnings
 
 test:
-    cargo nextest run --workspace
+    cargo hack test --feature-powerset
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
