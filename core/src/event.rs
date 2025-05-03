@@ -12,6 +12,7 @@ use metrics::{
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa-schema", derive(utoipa::ToSchema))]
 pub struct RecordedEvent {
     pub timestamp: DateTime<Utc>,
     pub event: Event,
@@ -34,6 +35,7 @@ pub enum Event {
 /// The metric type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa-schema", derive(utoipa::ToSchema))]
 pub enum MetricType {
     /// A counter is a cumulative metric that represents a single monotonically
     /// increasing counter whose value can only increase or be reset to zero on
@@ -54,6 +56,7 @@ pub enum MetricType {
 /// Describes what the metric operation does.
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "utoipa-schema", derive(utoipa::ToSchema))]
 pub enum MetricOperation {
     /// Increment a counter by a given value.
     IncrementCounter(u64),
@@ -69,31 +72,29 @@ pub enum MetricOperation {
     RecordHistogram(f64),
 }
 
-#[cfg(feature = "serde")]
+#[cfg(any(feature = "serde", feature = "utoipa-schema"))]
 mod serialization_helper {
-    use serde::{
-        Deserialize,
-        Serialize,
-    };
 
-    impl Serialize for super::Event {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            let other = Event::from(self);
-            other.serialize(serializer)
-        }
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    #[cfg_attr(feature = "utoipa-schema", derive(utoipa::ToSchema))]
+    pub enum Event {
+        Description {
+            name: String,
+            metric_type: super::MetricType,
+            unit: Option<String>,
+            description: String,
+        },
+        Metric {
+            key: Key,
+            op: super::MetricOperation,
+        },
     }
 
-    impl<'de> Deserialize<'de> for super::Event {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>,
-        {
-            let other = Event::deserialize(deserializer)?;
-            Ok(super::Event::from(other))
-        }
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+    #[cfg_attr(feature = "utoipa-schema", derive(utoipa::ToSchema))]
+    pub struct Key {
+        name: String,
+        labels: Vec<(String, String)>,
     }
 
     impl From<&super::Event> for Event {
@@ -160,23 +161,44 @@ mod serialization_helper {
         }
     }
 
-    #[derive(Serialize, Deserialize)]
-    pub enum Event {
-        Description {
-            name: String,
-            metric_type: super::MetricType,
-            unit: Option<String>,
-            description: String,
-        },
-        Metric {
-            key: Key,
-            op: super::MetricOperation,
-        },
+    #[cfg(feature = "serde")]
+    impl serde::Serialize for super::Event {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let other = Event::from(self);
+            other.serialize(serializer)
+        }
     }
 
-    #[derive(Serialize, Deserialize)]
-    pub struct Key {
-        name: String,
-        labels: Vec<(String, String)>,
+    #[cfg(feature = "serde")]
+    impl<'de> serde::Deserialize<'de> for super::Event {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            let other = Event::deserialize(deserializer)?;
+            Ok(super::Event::from(other))
+        }
+    }
+
+    #[cfg(feature = "utoipa-schema")]
+    impl utoipa::__dev::ComposeSchema for super::Event {
+        fn compose(
+            generics: Vec<utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>>,
+        ) -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+            <Event as utoipa::__dev::ComposeSchema>::compose(generics)
+        }
+    }
+
+    #[cfg(feature = "utoipa-schema")]
+    impl utoipa::ToSchema for super::Event {
+        fn name() -> std::borrow::Cow<'static, str> {
+            <Event as utoipa::ToSchema>::name()
+        }
+        fn schemas(schemas: &mut Vec<(String, utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>)>) {
+            <Event as utoipa::ToSchema>::schemas(schemas);
+        }
     }
 }

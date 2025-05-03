@@ -42,6 +42,7 @@
             cargo-criterion
             cargo-rdme
             cargo-nextest
+            cargo-hack
             wabt
             rust-analyzer
 

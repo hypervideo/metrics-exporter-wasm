@@ -8,6 +8,7 @@ exclude = [
   "examples/server-and-client/server",
   "examples/zstd-example",
   "examples/standalone-client",
+  "vendor/backoff",
 ]
 
 [workspace.package]
@@ -18,7 +19,7 @@ license = "MPL-2.0"
 repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
-backoff = { version = "0.4.1", git = "https://github.com/hypervideo/backoff", rev = "81cfb7082db35b943b22449ea27adc2c3fa4cbed", features = ["futures"] }
+backoff = { path = "./vendor/backoff", features = ["futures"] }
 chrono = { version = "0.4.40", default-features = false, features = ["now"] }
 futures = { version = "0.3.31", default-features = false }
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
@@ -29,6 +30,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.43.0", default-features = false, features = ["sync", "macros"] }
 tokio-util = { version = "0.7.13", default-features = false, features = ["futures-util"] }
 tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
+utoipa = { version = "5.3.1", features = ["chrono"] }
 wasm-bindgen = { version = "0.2.99", default-features = false }
 wasm-bindgen-futures = "0.4.49"
 wasmtimer = "0.4.1"
@@ -79,6 +81,8 @@ compress-brotli = ["metrics-exporter-wasm-core/compress-brotli"]
 compress-zstd-external = ["metrics-exporter-wasm-core/compress-zstd-external"]
 # Adds serde::Serialize and serde::Deserialize to all types
 serde = ["metrics-exporter-wasm-core/serde"]
+# Adds utoipa::ToSchema to all types
+utoipa-schema = ["metrics-exporter-wasm-core/utoipa-schema"]
 
 [profile.release-with-debug]
 inherits = "release"

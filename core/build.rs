@@ -34,6 +34,10 @@ fn generate_asn1_types() {
                 generator.add_global_derive("serde::Serialize");
                 generator.add_global_derive("serde::Deserialize");
             }
+            #[cfg(feature = "utoipa-schema")]
+            {
+                generator.add_global_derive("utoipa::ToSchema");
+            }
         },
     ) {
         panic!("Conversion to rust failed: {:?}", error);
