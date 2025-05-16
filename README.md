@@ -1,6 +1,9 @@
 <!-- cargo-rdme start -->
 
+
 # metrics-wasm-exporter
+
+[![CI](https://github.com/hypervideo/metrics-exporter-wasm/actions/workflows/ci.yml/badge.svg)](https://github.com/hypervideo/metrics-exporter-wasm/actions/workflows/ci.yml)
 
 This is a WASM implementation of a [metrics](https://github.com/metrics-rs/metrics) [Recorder](https://docs.rs/metrics/latest/metrics/trait.Recorder.html).
 
@@ -14,5 +17,32 @@ Metrics can be transferred in two ways:
 
 Unlike normal metrics, the metrics that metrics-wasm-exporter exports also carry a timestamp of when the metric was
 originally recorded.
+
+Example:
+
+```rust
+use metrics_exporter_wasm::{WasmRecorder, MetricsHttpSender};
+use std::time::Duration;
+
+let recorder = WasmRecorder::builder()
+    .buffer_size(5)
+    .build()
+    .expect("failed to create recorder");
+
+// Send metrics in regular intervals to a server using HTTP POST requests.
+// Will backoff and retry as needed.
+const ENDPOINT: &str = "/receive-metrics";
+let guard = MetricsHttpSender::new()
+    .endpoint(ENDPOINT)
+    .send_frequency(Duration::from_secs(1))
+    .start_with(&recorder);
+
+// Run forever
+guard.disarm();
+
+metrics::set_global_recorder(recorder).expect("failed to set global recorder");
+```
+
+For how to use compression and how to implement a receiving server handler see the examples at [hypervideo/metrics-exporter-wasm](https://github.com/hypervideo/metrics-exporter-wasm/tree/main/examples/server-and-client).
 
 <!-- cargo-rdme end -->

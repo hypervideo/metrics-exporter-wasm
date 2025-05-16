@@ -8,7 +8,6 @@ exclude = [
   "examples/server-and-client/server",
   "examples/zstd-example",
   "examples/standalone-client",
-  "vendor/backoff",
 ]
 
 [workspace.package]
@@ -19,7 +18,7 @@ license = "MPL-2.0"
 repository = "https://github.com/hypervideo/metrics-exporter-wasm"
 
 [workspace.dependencies]
-backoff = { path = "./vendor/backoff", features = ["futures"] }
+backon = { version = "1.5.0", default-features = true }
 chrono = { version = "0.4.40", default-features = false, features = ["now"] }
 futures = { version = "0.3.31", default-features = false }
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
@@ -56,7 +55,7 @@ repository.workspace = true
 description = "A metrics-compatible exporter meant for browser WASM applications that outputs metrics over HTTP."
 
 [dependencies]
-backoff.workspace = true
+backon.workspace = true
 chrono.workspace = true
 futures.workspace = true
 gloo.workspace = true
