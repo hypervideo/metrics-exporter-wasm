@@ -5,6 +5,7 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Core library for metrics-exporter-wasm. Provides types and deserializers for the receiving server."
 
 [dependencies]
 asn1rs.workspace = true
