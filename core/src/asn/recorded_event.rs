@@ -40,6 +40,12 @@ impl From<Event> for RecordedEvent {
     }
 }
 
+impl From<RecordedEvent> for Event {
+    fn from(event: RecordedEvent) -> Self {
+        event.event
+    }
+}
+
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 impl generated::RecordedEvents {
