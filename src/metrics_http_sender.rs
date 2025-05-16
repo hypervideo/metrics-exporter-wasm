@@ -2,6 +2,10 @@ use crate::{
     Event,
     WasmRecorder,
 };
+use backon::{
+    ExponentialBuilder,
+    Retryable,
+};
 use metrics_exporter_wasm_core::{
     util_time,
     Asn1Encode,
@@ -33,7 +37,6 @@ pub trait Batch {
     type CompletedBatch: Asn1Encode;
 
     fn new() -> Self;
-    fn reset(&mut self);
     fn pop_front(&mut self) -> Option<Self::Item>;
     fn push_back(&mut self, item: Self::Item);
     fn len(&self) -> usize;
@@ -60,11 +63,6 @@ impl Batch for BatchedEvents {
         }
     }
 
-    fn reset(&mut self) {
-        self.events.clear();
-        self.batch_start_time = util_time::now();
-    }
-
     fn pop_front(&mut self) -> Option<Self::Item> {
         self.events.pop_front().map(Into::into)
     }
@@ -78,7 +76,10 @@ impl Batch for BatchedEvents {
     }
 
     fn finalize(&mut self) -> Self::CompletedBatch {
-        RecordedEvents::new(self.batch_start_time, self.events.drain(..).collect())
+        let start_time = self.batch_start_time;
+        let events = self.events.drain(..).collect();
+        self.batch_start_time = util_time::now();
+        RecordedEvents::new(start_time, events)
     }
 }
 
@@ -209,8 +210,6 @@ impl MetricsHttpSender<EndpointDefined> {
     }
 
     async fn run_transport<B: Batch>(self, mut rx: broadcast::Receiver<B::Item>, token: CancellationToken) {
-        use backoff::backoff::Backoff as _;
-
         let Self {
             max_chunk_size: buffer_size,
             send_frequency,
@@ -259,30 +258,30 @@ impl MetricsHttpSender<EndpointDefined> {
                     trace!(%n, "sending metrics");
                     time_to_send = None;
 
-
-                    let mut backoff = backoff::ExponentialBackoffBuilder::new()
-                        .with_max_elapsed_time(Some(Duration::from_secs(60)))
-                        .build();
-
                     let completed_batch = batch.finalize();
-
-                    loop {
-                        match post_metrics(Duration::from_secs(5), &completed_batch, &endpoint, compression).await {
-                            Ok(_) => {
-                                if let Some(metrics_processed_counter) = &metrics_processed_counter {
-                                    metrics_processed_counter.increment(n as _);
-                                }
-                                break
-                            },
-                            Err(err) => {
-                                if let Some(backoff) = backoff.next_backoff() {
-                                    warn!(?err, "failed to send metrics, retrying in {backoff:?}");
-                                    sleep(backoff).await;
-                                } else {
-                                    error!(?err, "failed to send metrics, giving up and loosing {n} metrics");
-                                    break;
-                                }
+                    let post = || async { post_metrics(Duration::from_secs(5), &completed_batch, &endpoint, compression).await };
+                    match post
+                        .retry(
+                            ExponentialBuilder::new()
+                                .with_max_times(5)
+                                .with_factor(2.0)
+                                .with_min_delay(Duration::from_secs(1))
+                                .with_max_delay(Duration::from_secs(60))
+                                .with_total_delay(Some(Duration::from_secs(3 * 60))),
+                        )
+                        .notify(|err: &std::io::Error, dur: Duration| {
+                            warn!(?err, "failed to send metrics, retrying in {dur:?}: {err}");
+                        })
+                        .await
+                    {
+                        Ok(_) => {
+                            if let Some(metrics_processed_counter) = &metrics_processed_counter {
+                                metrics_processed_counter.increment(n as _);
                             }
+                            trace!(%n, "metrics send");
+                        }
+                        Err(err) => {
+                            error!(?err, "failed to send metrics, giving up and loosing {n} metrics");
                         }
                     }
                 }
