@@ -527,6 +527,7 @@ name = "metrics-exporter-wasm"
 version = "0.2.1"
 dependencies = [
  "backon",
+ "bytes",
  "chrono",
  "futures",
  "gloo",
@@ -536,6 +537,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasmtimer",
  "web-sys",
@@ -546,6 +548,7 @@ name = "metrics-exporter-wasm-core"
 version = "0.2.1"
 dependencies = [
  "asn1rs",
+ "bytes",
  "chrono",
  "metrics",
  "tracing",

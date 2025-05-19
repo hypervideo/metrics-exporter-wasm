@@ -461,6 +461,8 @@ name = "metrics-exporter-wasm"
 version = "0.2.1"
 dependencies = [
  "backon",
+ "brotli",
+ "bytes",
  "chrono",
  "futures",
  "gloo",
@@ -470,6 +472,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasmtimer",
  "web-sys",
@@ -480,12 +483,11 @@ name = "metrics-exporter-wasm-core"
 version = "0.2.1"
 dependencies = [
  "asn1rs",
- "brotli",
+ "bytes",
  "chrono",
  "metrics",
  "tracing",
  "wasm-bindgen",
- "wasm-bindgen-futures",
  "wasmtimer",
  "web-sys",
 ]
@@ -739,6 +741,7 @@ checksum = "8917285742e9f3e1683f0a9c4e6b57960b7314d0b08d30d1ecd426713ee2eee9"
 name = "standalone-client"
 version = "0.0.0"
 dependencies = [
+ "bytes",
  "console_error_panic_hook",
  "metrics",
  "metrics-exporter-wasm",

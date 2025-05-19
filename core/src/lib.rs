@@ -3,8 +3,6 @@
 mod asn;
 mod event;
 pub mod util_time;
-#[cfg(feature = "compress-zstd-external")]
-pub mod zstd_external;
 
 pub use asn::{
     Asn1Decode,

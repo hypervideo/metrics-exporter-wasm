@@ -47,19 +47,21 @@ For how to use compression and how to implement a receiving server handler see t
 
 */
 
+mod compression;
 mod http_transport;
 mod metrics_http_sender;
 mod recorder;
 
+#[cfg(feature = "compress-zstd-external")]
+pub mod zstd_external;
+
+pub use compression::Compression;
 pub use http_transport::{
-    Compression,
     EndpointDefined,
     EndpointUndefined,
     HttpPostTransport,
     Transport,
 };
-#[cfg(feature = "compress-zstd-external")]
-pub use metrics_exporter_wasm_core::zstd_external;
 pub use metrics_exporter_wasm_core::{
     Asn1Decode,
     Asn1Encode,

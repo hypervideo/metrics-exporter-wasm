@@ -1,9 +1,10 @@
+use crate::Compression;
+use bytes::Bytes;
 use gloo::net::http::{
     Headers,
     Method,
     RequestBuilder,
 };
-use metrics_exporter_wasm_core::Asn1Encode;
 use std::{
     future::Future,
     io,
@@ -11,16 +12,8 @@ use std::{
 };
 use web_sys::AbortController;
 
-#[derive(Debug, Clone, Copy)]
-pub enum Compression {
-    #[cfg(feature = "compress-zstd-external")]
-    Zstd { level: u8 },
-    #[cfg(feature = "compress-brotli")]
-    Brotli,
-}
-
 pub trait Transport {
-    fn send(&self, payload: &impl Asn1Encode) -> impl Future<Output = io::Result<()>>;
+    fn send(&self, payload: &Bytes) -> impl Future<Output = io::Result<()>>;
 }
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -93,7 +86,7 @@ impl HttpPostTransport<EndpointDefined> {
 }
 
 impl Transport for HttpPostTransport<EndpointDefined> {
-    fn send(&self, events: &impl Asn1Encode) -> impl Future<Output = io::Result<()>> {
+    fn send(&self, payload: &Bytes) -> impl Future<Output = io::Result<()>> {
         let timeout = self.timeout;
         let EndpointDefined(endpoint) = &self.endpoint;
         let compression = self.compression;
@@ -109,14 +102,14 @@ impl Transport for HttpPostTransport<EndpointDefined> {
             #[cfg(feature = "compress-zstd-external")]
             Some(Compression::Zstd { level }) => {
                 headers.set("content-encoding", "zstd");
-                events.encode_and_compress_zstd_external(level)
+                Compression::compress_zstd_external(payload, level)
             }
             #[cfg(feature = "compress-brotli")]
             Some(Compression::Brotli) => {
                 headers.set("content-encoding", "br");
-                events.encode_and_compress_br()
+                Compression::compress_br(payload)
             }
-            None => events.encode().map_err(err),
+            None => io::Result::Ok(payload.clone()),
         };
 
         let req = RequestBuilder::new(endpoint.as_str())
@@ -127,7 +120,7 @@ impl Transport for HttpPostTransport<EndpointDefined> {
         async move {
             let body = body?;
             let body_size = body.len();
-            let req = req.body(body).map_err(err)?;
+            let req = req.body(body.to_vec()).map_err(err)?;
 
             let fut = async {
                 let res = req.send().await.map_err(err)?;

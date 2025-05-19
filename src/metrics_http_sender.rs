@@ -7,6 +7,7 @@ use backon::{
     ExponentialBuilder,
     Retryable,
 };
+use bytes::Bytes;
 use metrics_exporter_wasm_core::{
     util_time,
     Asn1Encode,
@@ -197,8 +198,15 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
                     trace!(%n, "sending metrics");
                     time_to_send = None;
 
-                    let completed_batch = batch.finalize();
-                    let post = || async { transport.send(&completed_batch).await };
+
+                    let encoded = match batch.finalize().encode() {
+                        Ok(encoded) => Bytes::from(encoded),
+                        Err(err) => {
+                            error!(?err, "failed to encode metrics");
+                            continue;
+                        }
+                    };
+                    let post = || async { transport.send(&encoded).await };
                     match post
                         .retry(
                             ExponentialBuilder::new()
