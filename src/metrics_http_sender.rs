@@ -228,7 +228,12 @@ impl MetricsHttpSender<EndpointDefined> {
             metrics::describe_counter!(
                 "metrics_processed",
                 metrics::Unit::Count,
-                "metrics-exporter-wasm internal counter that countr how many events where processed."
+                "metrics-exporter-wasm internal counter that counts how many events where processed."
+            );
+            metrics::describe_histogram!(
+                "metrics_exporter_compressed_payload_size",
+                metrics::Unit::Bytes,
+                "metrics-exporter-wasm internal. Compressed payload size in bytes."
             );
             Some(metrics::counter!("metrics_processed"))
         } else {
@@ -259,7 +264,7 @@ impl MetricsHttpSender<EndpointDefined> {
                     time_to_send = None;
 
                     let completed_batch = batch.finalize();
-                    let post = || async { post_metrics(Duration::from_secs(5), &completed_batch, &endpoint, compression).await };
+                    let post = || async { post_metrics(Duration::from_secs(5), &completed_batch, &endpoint, compression, self.self_metrics).await };
                     match post
                         .retry(
                             ExponentialBuilder::new()
@@ -321,6 +326,7 @@ async fn post_metrics(
     events: &impl Asn1Encode,
     endpoint: &str,
     compression: Option<Compression>,
+    self_metrics: bool,
 ) -> std::io::Result<()> {
     use gloo::net::http::{
         Headers,
@@ -353,6 +359,8 @@ async fn post_metrics(
         None => events.encode().map_err(err)?,
     };
 
+    let body_size = body.len();
+
     let req = RequestBuilder::new(endpoint)
         .method(Method::POST)
         .headers(headers)
@@ -370,6 +378,10 @@ async fn post_metrics(
                 format!("Failed to fetch server info. status={status} {text}"),
             ));
         };
+
+        if self_metrics {
+            metrics::histogram!("metrics_exporter_compressed_payload_size").record(body_size as f64);
+        }
 
         Ok(())
     };
