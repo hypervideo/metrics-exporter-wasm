@@ -13,6 +13,8 @@ use std::{
 use web_sys::AbortController;
 
 pub trait Transport {
+    fn enable_self_metrics(&mut self, _self_metrics: bool) {}
+
     fn send(&self, payload: &Bytes) -> impl Future<Output = io::Result<()>>;
 }
 
@@ -77,15 +79,11 @@ impl HttpPostTransport<EndpointUndefined> {
     }
 }
 
-impl HttpPostTransport<EndpointDefined> {
-    /// Set whether to emit internal metrics.
-    pub fn self_metrics(mut self, self_metrics: bool) -> Self {
-        self.self_metrics = self_metrics;
-        self
-    }
-}
-
 impl Transport for HttpPostTransport<EndpointDefined> {
+    fn enable_self_metrics(&mut self, self_metrics: bool) {
+        self.self_metrics = self_metrics;
+    }
+
     fn send(&self, payload: &Bytes) -> impl Future<Output = io::Result<()>> {
         let timeout = self.timeout;
         let EndpointDefined(endpoint) = &self.endpoint;

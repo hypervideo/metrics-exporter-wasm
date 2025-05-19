@@ -150,8 +150,10 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
             max_chunk_size: buffer_size,
             send_frequency,
             self_metrics,
-            transport,
+            mut transport,
         } = self;
+
+        transport.enable_self_metrics(self_metrics);
 
         debug!("starting metrics transport");
         defer! {
