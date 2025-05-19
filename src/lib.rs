@@ -20,7 +20,7 @@ originally recorded.
 Example:
 
 ```rust
-use metrics_exporter_wasm::{WasmRecorder, MetricsHttpSender};
+use metrics_exporter_wasm::{WasmRecorder, MetricsHttpSender, HttpPostTransport};
 use std::time::Duration;
 
 # fn main() {
@@ -32,8 +32,7 @@ let recorder = WasmRecorder::builder()
 // Send metrics in regular intervals to a server using HTTP POST requests.
 // Will backoff and retry as needed.
 const ENDPOINT: &str = "/receive-metrics";
-let guard = MetricsHttpSender::new()
-    .endpoint(ENDPOINT)
+let guard = MetricsHttpSender::new(HttpPostTransport::new().endpoint(ENDPOINT))
     .send_frequency(Duration::from_secs(1))
     .start_with(&recorder);
 
@@ -48,9 +47,17 @@ For how to use compression and how to implement a receiving server handler see t
 
 */
 
+mod http_transport;
 mod metrics_http_sender;
 mod recorder;
 
+pub use http_transport::{
+    Compression,
+    EndpointDefined,
+    EndpointUndefined,
+    HttpPostTransport,
+    Transport,
+};
 #[cfg(feature = "compress-zstd-external")]
 pub use metrics_exporter_wasm_core::zstd_external;
 pub use metrics_exporter_wasm_core::{
@@ -65,9 +72,6 @@ pub use metrics_exporter_wasm_core::{
 };
 pub use metrics_http_sender::{
     Batch,
-    Compression,
-    EndpointDefined,
-    EndpointUndefined,
     MetricsHttpSender,
 };
 pub use recorder::{

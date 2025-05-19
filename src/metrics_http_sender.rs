@@ -1,5 +1,6 @@
 use crate::{
     Event,
+    Transport,
     WasmRecorder,
 };
 use backon::{
@@ -25,11 +26,6 @@ use wasmtimer::{
     std::Instant,
     tokio::sleep,
 };
-
-#[doc(hidden)]
-pub struct EndpointUndefined;
-#[doc(hidden)]
-pub struct EndpointDefined(String);
 
 /// A generic batch to represent the data that gets accumulated and then sent using the [MetricsHttpSender].
 pub trait Batch {
@@ -89,35 +85,18 @@ impl Batch for BatchedEvents {
 pub struct MetricsHttpSender<T> {
     max_chunk_size: Option<usize>,
     send_frequency: Duration,
-    compression: Option<Compression>,
     self_metrics: bool,
-    endpoint: T,
+    transport: T,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Compression {
-    #[cfg(feature = "compress-zstd-external")]
-    Zstd { level: u8 },
-    #[cfg(feature = "compress-brotli")]
-    Brotli,
-}
-
-impl Default for MetricsHttpSender<EndpointUndefined> {
-    fn default() -> Self {
+impl<T> MetricsHttpSender<T> {
+    pub fn new(transport: T) -> Self {
         Self {
             max_chunk_size: None,
             send_frequency: Duration::from_secs(15),
-            compression: None,
             self_metrics: false,
-            endpoint: EndpointUndefined,
+            transport,
         }
-    }
-}
-
-impl MetricsHttpSender<EndpointUndefined> {
-    /// Create a new metrics sender.
-    pub fn new() -> Self {
-        Default::default()
     }
 
     /// How many metrics events to maximally send in one request.
@@ -132,12 +111,6 @@ impl MetricsHttpSender<EndpointUndefined> {
         self
     }
 
-    /// Set the compression algorithm to use.
-    pub fn compression(mut self, compression: Option<Compression>) -> Self {
-        self.compression = compression;
-        self
-    }
-
     /// Set whether to emit internal metrics.
     ///
     /// Currently this is a `metrics_processed` counter that counts how many metrics events (or other batch items) have
@@ -145,48 +118,10 @@ impl MetricsHttpSender<EndpointUndefined> {
     pub fn self_metrics(mut self, self_metrics: bool) -> Self {
         self.self_metrics = self_metrics;
         self
-    }
-
-    /// Set the endpoint for the metrics transport.
-    pub fn endpoint(self, endpoint: impl ToString) -> MetricsHttpSender<EndpointDefined> {
-        MetricsHttpSender {
-            max_chunk_size: self.max_chunk_size,
-            send_frequency: self.send_frequency,
-            compression: self.compression,
-            self_metrics: self.self_metrics,
-            endpoint: EndpointDefined(endpoint.to_string()),
-        }
     }
 }
 
-impl MetricsHttpSender<EndpointDefined> {
-    /// Set the buffer size for the metrics transport.
-    pub fn buffer_size(mut self, size: Option<usize>) -> Self {
-        self.max_chunk_size = size;
-        self
-    }
-
-    /// Set the frequency at which metrics are sent to the transport.
-    pub fn send_frequency(mut self, frequency: Duration) -> Self {
-        self.send_frequency = frequency;
-        self
-    }
-
-    /// Set the compression algorithm to use.
-    pub fn compression(mut self, compression: Option<Compression>) -> Self {
-        self.compression = compression;
-        self
-    }
-
-    /// Set whether to emit internal metrics.
-    ///
-    /// Currently this is a `metrics_processed` counter that counts how many metrics events (or other batch items) have
-    /// been sent.
-    pub fn self_metrics(mut self, self_metrics: bool) -> Self {
-        self.self_metrics = self_metrics;
-        self
-    }
-
+impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
     /// Start sending metrics to the endpoint specified.
     ///
     /// Returns a guard that will stop the transport when dropped.
@@ -213,14 +148,13 @@ impl MetricsHttpSender<EndpointDefined> {
         let Self {
             max_chunk_size: buffer_size,
             send_frequency,
-            compression,
             self_metrics,
-            endpoint: EndpointDefined(endpoint),
+            transport,
         } = self;
 
-        debug!(%endpoint, "starting metrics transport");
+        debug!("starting metrics transport");
         defer! {
-            debug!(%endpoint, "metrics transport stopped");
+            debug!("metrics transport stopped");
         }
 
         // Initial connection, send internal metadata
@@ -264,7 +198,7 @@ impl MetricsHttpSender<EndpointDefined> {
                     time_to_send = None;
 
                     let completed_batch = batch.finalize();
-                    let post = || async { post_metrics(Duration::from_secs(5), &completed_batch, &endpoint, compression, self.self_metrics).await };
+                    let post = || async { transport.send(&completed_batch).await };
                     match post
                         .retry(
                             ExponentialBuilder::new()
@@ -298,7 +232,7 @@ impl MetricsHttpSender<EndpointDefined> {
                         },
 
                         Err(broadcast::error::RecvError::Lagged(_)) => {
-                            warn!(?endpoint, "metrics transport lagged");
+                            warn!("metrics transport lagged");
                         },
 
                         Ok(event) => {
@@ -317,81 +251,6 @@ impl MetricsHttpSender<EndpointDefined> {
                     }
                 }
             }
-        }
-    }
-}
-
-async fn post_metrics(
-    timeout: Duration,
-    events: &impl Asn1Encode,
-    endpoint: &str,
-    compression: Option<Compression>,
-    self_metrics: bool,
-) -> std::io::Result<()> {
-    use gloo::net::http::{
-        Headers,
-        Method,
-        RequestBuilder,
-    };
-    use web_sys::AbortController;
-
-    fn err(err: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> std::io::Error {
-        std::io::Error::new(std::io::ErrorKind::Other, err)
-    }
-
-    let controller = AbortController::new().unwrap();
-    let signal = controller.signal();
-
-    let headers = Headers::new();
-    headers.set("content-type", "application/octet-stream");
-
-    let body = match compression {
-        #[cfg(feature = "compress-zstd-external")]
-        Some(Compression::Zstd { level }) => {
-            headers.set("content-encoding", "zstd");
-            events.encode_and_compress_zstd_external(level)?
-        }
-        #[cfg(feature = "compress-brotli")]
-        Some(Compression::Brotli) => {
-            headers.set("content-encoding", "br");
-            events.encode_and_compress_br()?
-        }
-        None => events.encode().map_err(err)?,
-    };
-
-    let body_size = body.len();
-
-    let req = RequestBuilder::new(endpoint)
-        .method(Method::POST)
-        .headers(headers)
-        .abort_signal(Some(&signal))
-        .body(body)
-        .map_err(err)?;
-
-    let fut = async {
-        let res = req.send().await.map_err(err)?;
-        if !res.ok() {
-            let text = res.text().await.map_err(|err| err.to_string()).unwrap_or_default();
-            let status = res.status();
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Failed to fetch server info. status={status} {text}"),
-            ));
-        };
-
-        if self_metrics {
-            metrics::histogram!("metrics_exporter_compressed_payload_size").record(body_size as f64);
-        }
-
-        Ok(())
-    };
-
-    tokio::select! {
-        biased;
-        res = fut => res,
-        _ = wasmtimer::tokio::sleep(timeout) => {
-            controller.abort();
-            Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Timed out"))
         }
     }
 }
