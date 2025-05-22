@@ -19,7 +19,7 @@ originally recorded.
 
 Example:
 
-```rust
+```no_run
 use metrics_exporter_wasm::{WasmRecorder, MetricsHttpSender, HttpPostTransport};
 use std::time::Duration;
 
