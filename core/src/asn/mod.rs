@@ -19,12 +19,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 pub trait Asn1Encode {
     fn encode(&self) -> Result<Vec<u8>>;
-
-    #[cfg(feature = "compress-brotli")]
-    fn encode_and_compress_br(&self) -> Result<Vec<u8>>;
-
-    #[cfg(feature = "compress-zstd-external")]
-    fn encode_and_compress_zstd_external(&self, level: u8) -> Result<Vec<u8>>;
 }
 
 pub trait Asn1Decode: Sized {

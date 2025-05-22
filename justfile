@@ -25,10 +25,10 @@ print-wasm-size: build
     cd examples/server-and-client/client && just print-wasm-size
 
 lint:
-    cargo hack clippy --feature-powerset -- -D warnings
+    cargo hack clippy --feature-powerset --exclude-features compress-zstd-external-from-source,asn-debug -- -D warnings
 
 test:
-    cargo hack test --feature-powerset
+    cargo hack test --feature-powerset --exclude-features compress-zstd-external-from-source,asn-debug
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 

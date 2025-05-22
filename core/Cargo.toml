@@ -1,21 +1,21 @@
 [package]
 name = "metrics-exporter-wasm-core"
-version = "0.2.1"
+version = "0.3.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+description = "Core library for metrics-exporter-wasm. Provides types and deserializers for the receiving server."
 
 [dependencies]
 asn1rs.workspace = true
-brotli = { version = "7.0.0", optional = true }
+bytes.workspace = true
 chrono.workspace = true
 metrics.workspace = true
 serde = { workspace = true, optional = true }
 tracing.workspace = true
 utoipa = { workspace = true, optional = true }
 wasm-bindgen.workspace = true
-wasm-bindgen-futures = { workspace = true, optional = true }
 web-sys.workspace = true
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -29,12 +29,6 @@ asn1rs.workspace = true
 
 [features]
 default = []
-# Provide brotli support using the `brotli` crate.
-compress-brotli = ["dep:brotli"]
-# Provide zstd support, package [zstd-wasm](https://github.com/bokuweb/zstd-wasm).
-compress-zstd-external = ["dep:wasm-bindgen-futures"]
-# Rebuild zstd-wasm from source.
-compress-zstd-external-from-source = []
 asn-debug = ["asn1rs/descriptive-deserialize-errors", "asn1rs/debug-proc-macro"]
 serde = ["dep:serde", "chrono/serde"]
 utoipa-schema = ["dep:utoipa"]

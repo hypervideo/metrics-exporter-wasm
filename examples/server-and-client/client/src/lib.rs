@@ -1,5 +1,6 @@
 use metrics_exporter_wasm::{
     Compression,
+    HttpPostTransport,
     MetricsHttpSender,
     WasmRecorder,
 };
@@ -28,11 +29,13 @@ pub async fn setup() {
         .expect("failed to create recorder");
 
     const ENDPOINT: &str = "/receive-metrics";
-    let guard = MetricsHttpSender::new()
-        .endpoint(ENDPOINT)
-        .send_frequency(Duration::from_secs(1))
-        .compression(Some(Compression::Zstd { level: 3 }))
-        .start_with(&recorder);
+    let guard = MetricsHttpSender::new(
+        HttpPostTransport::new()
+            .compression(Some(Compression::Zstd { level: 3 }))
+            .endpoint(ENDPOINT),
+    )
+    .send_frequency(Duration::from_secs(1))
+    .start_with(&recorder);
 
     // Run forever
     guard.disarm();

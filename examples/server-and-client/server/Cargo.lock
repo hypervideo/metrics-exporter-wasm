@@ -727,9 +727,10 @@ dependencies = [
 
 [[package]]
 name = "metrics-exporter-wasm-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "asn1rs",
+ "bytes",
  "chrono",
  "metrics",
  "tracing",

@@ -40,6 +40,12 @@ impl From<Event> for RecordedEvent {
     }
 }
 
+impl From<RecordedEvent> for Event {
+    fn from(event: RecordedEvent) -> Self {
+        event.event
+    }
+}
+
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 impl generated::RecordedEvents {
@@ -72,40 +78,6 @@ impl Asn1Encode for generated::RecordedEvents {
             .write(self)
             .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))?;
         Ok(writer.into_bytes_vec())
-    }
-
-    #[cfg(feature = "compress-brotli")]
-    /// Serialize the events using asn1 and compress using brotli.
-    fn encode_and_compress_br(&self) -> Result<Vec<u8>> {
-        let encoded = self.encode()?;
-
-        let mut compressed = Vec::new();
-        {
-            use std::io::Write as _;
-            let mut writer = brotli::CompressorWriter::new(&mut compressed, 4096, 11, 22);
-            writer
-                .write_all(&encoded)
-                .map_err(|e| Error::new(std::io::ErrorKind::InvalidData, e))?;
-        }
-
-        Ok(compressed)
-    }
-
-    /// Serialize the events using asn1 and compress using zstd. This requires [`crate::zstd_external::initialize`] to
-    /// be called first!
-    #[cfg(feature = "compress-zstd-external")]
-    fn encode_and_compress_zstd_external(&self, level: u8) -> Result<Vec<u8>> {
-        use wasm_bindgen::prelude::*;
-        use web_sys::js_sys::Uint8Array;
-
-        #[wasm_bindgen]
-        extern "C" {
-            #[wasm_bindgen(js_namespace = zstd)]
-            fn compress(buf: Uint8Array, level: u32) -> Uint8Array;
-        }
-        let encoded = self.encode()?;
-        let compressed = compress(Uint8Array::from(encoded.as_slice()), level as _);
-        Ok(compressed.to_vec())
     }
 }
 
