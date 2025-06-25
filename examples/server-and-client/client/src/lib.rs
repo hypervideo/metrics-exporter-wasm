@@ -35,7 +35,7 @@ pub async fn setup() {
             .endpoint(ENDPOINT),
     )
     .send_frequency(Duration::from_secs(1))
-    .start_with(&recorder);
+    .start_with_metrics_recorder(&recorder);
 
     // Run forever
     guard.disarm();
