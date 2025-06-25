@@ -2,6 +2,10 @@
 
 This package tries to adhere to [semver](https://semver.org/).
 
+## [0.4.0]
+### Add/Change:
+Rename `metrics_exporter_wasm::MetricsHttpSender::start_with` to `metrics_exporter_wasm::MetricsHttpSender::start_with_metrics_recorder` and add `metrics_exporter_wasm::metrics_http_sender::MetricsHttpSender::start_with_metrics_recorder_and_filter` to allow to filter events which should be sent to the server.
+
 ## [0.3.0]
 ### Add/Change:
 This introduces a Transport trait that on the one hand allows to run the wasm

@@ -21,7 +21,7 @@ originally recorded.
 Example:
 
 ```rust
-use metrics_exporter_wasm::{WasmRecorder, MetricsHttpSender};
+use metrics_exporter_wasm::{WasmRecorder, MetricsHttpSender, HttpPostTransport};
 use std::time::Duration;
 
 let recorder = WasmRecorder::builder()
@@ -32,10 +32,9 @@ let recorder = WasmRecorder::builder()
 // Send metrics in regular intervals to a server using HTTP POST requests.
 // Will backoff and retry as needed.
 const ENDPOINT: &str = "/receive-metrics";
-let guard = MetricsHttpSender::new()
-    .endpoint(ENDPOINT)
+let guard = MetricsHttpSender::new(HttpPostTransport::new().endpoint(ENDPOINT))
     .send_frequency(Duration::from_secs(1))
-    .start_with(&recorder);
+    .start_with_metrics_recorder(&recorder);
 
 // Run forever
 guard.disarm();

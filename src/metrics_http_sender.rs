@@ -8,6 +8,10 @@ use backon::{
     Retryable,
 };
 use bytes::Bytes;
+use futures::{
+    Stream,
+    StreamExt as _,
+};
 use metrics_exporter_wasm_core::{
     util_time,
     Asn1Encode,
@@ -30,7 +34,7 @@ use wasmtimer::{
 
 /// A generic batch to represent the data that gets accumulated and then sent using the [MetricsHttpSender].
 pub trait Batch {
-    type Item: Clone + 'static;
+    type Item: Clone + Send + 'static;
     type CompletedBatch: Asn1Encode;
 
     fn new() -> Self;
@@ -126,26 +130,54 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
     /// Start sending metrics to the endpoint specified.
     ///
     /// Returns a guard that will stop the transport when dropped.
-    pub fn start_with(self, recorder: &WasmRecorder) -> DropGuard {
-        self.start_with_receiver::<BatchedEvents>(recorder.subscribe())
+    pub fn start_with_metrics_recorder(self, recorder: &WasmRecorder) -> DropGuard {
+        self.start_with_receiver::<BatchedEvents>(recorder.subscribe(), None::<fn(&Event) -> bool>)
+    }
+
+    /// Start sending metrics to the endpoint specified filtering out specific events.
+    ///
+    /// Like [Self::start_with_metrics_recorder].
+    pub fn start_with_metrics_recorder_and_filter(
+        self,
+        recorder: &WasmRecorder,
+        filter_fn: impl Fn(&Event) -> bool + Copy + 'static,
+    ) -> DropGuard {
+        self.start_with_receiver::<BatchedEvents>(recorder.subscribe(), Some(filter_fn))
     }
 
     /// If you want send more data than just metrics event, this generic method allow you to provide a custom [Batch]
     /// implementation and channel for [Batch::Item]s.
-    pub fn start_with_receiver<B: Batch>(self, rx: broadcast::Receiver<B::Item>) -> DropGuard {
+    pub fn start_with_receiver<B: Batch>(
+        self,
+        rx: broadcast::Receiver<B::Item>,
+        filter_fn: Option<impl Fn(&B::Item) -> bool + Copy + 'static>,
+    ) -> DropGuard {
         let token = CancellationToken::new();
 
         wasm_bindgen_futures::spawn_local({
             let token = token.clone();
             async move {
-                self.run_transport::<B>(rx, token).await;
+                let stream = tokio_stream::wrappers::BroadcastStream::new(rx).filter_map(move |result| async move {
+                    match result {
+                        Err(tokio_stream::wrappers::errors::BroadcastStreamRecvError::Lagged(_)) => {
+                            warn!("metrics transport lagged");
+                            None
+                        }
+                        Ok(event) => match filter_fn {
+                            Some(filter_fn) => filter_fn(&event).then_some(event),
+                            None => Some(event),
+                        },
+                    }
+                });
+
+                self.run_transport::<B>(stream, token).await;
             }
         });
 
         token.drop_guard()
     }
 
-    async fn run_transport<B: Batch>(self, mut rx: broadcast::Receiver<B::Item>, token: CancellationToken) {
+    async fn run_transport<B: Batch>(self, mut stream: impl Stream<Item = B::Item>, token: CancellationToken) {
         let Self {
             max_chunk_size: buffer_size,
             send_frequency,
@@ -181,6 +213,9 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
         let mut time_to_send: Option<wasmtimer::tokio::Sleep> = None;
         let mut batch = B::new();
         let mut last_warning = None::<Instant>;
+
+        let mut stream = std::pin::pin!(stream);
+        // let nex = stream.next().await;
 
         loop {
             tokio::select! {
@@ -235,29 +270,17 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
                     }
                 }
 
-                event = rx.recv() => {
-                    match event {
-                        Err(broadcast::error::RecvError::Closed) => {
-                            break;
-                        },
-
-                        Err(broadcast::error::RecvError::Lagged(_)) => {
-                            warn!("metrics transport lagged");
-                        },
-
-                        Ok(event) => {
-                            if buffer_size.is_some_and(|buffer_size| batch.len() >= buffer_size) {
-                                if last_warning.is_none_or(|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
-                                    warn!("metrics chunk size exceeded, dropping metrics");
-                                    last_warning = Some(Instant::now());
-                                }
-                                batch.pop_front();
-                            };
-                            batch.push_back(event);
-                            if time_to_send.is_none() {
-                                time_to_send = Some(sleep(send_frequency));
-                            }
-                        },
+                Some(event) = stream.next() => {
+                    if buffer_size.is_some_and(|buffer_size| batch.len() >= buffer_size) {
+                        if last_warning.is_none_or(|last_warning| last_warning.elapsed() >= Duration::from_secs(5)) {
+                            warn!("metrics chunk size exceeded, dropping metrics");
+                            last_warning = Some(Instant::now());
+                        }
+                        batch.pop_front();
+                    };
+                    batch.push_back(event);
+                    if time_to_send.is_none() {
+                        time_to_send = Some(sleep(send_frequency));
                     }
                 }
             }
