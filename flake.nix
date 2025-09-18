@@ -43,6 +43,8 @@
             cargo-rdme
             cargo-nextest
             cargo-hack
+            cargo-duplicates
+            cargo-workspaces
             wabt
             rust-analyzer
 
