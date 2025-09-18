@@ -177,7 +177,7 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
         token.drop_guard()
     }
 
-    async fn run_transport<B: Batch>(self, mut stream: impl Stream<Item = B::Item>, token: CancellationToken) {
+    async fn run_transport<B: Batch>(self, stream: impl Stream<Item = B::Item>, token: CancellationToken) {
         let Self {
             max_chunk_size: buffer_size,
             send_frequency,
@@ -215,7 +215,6 @@ impl<T: Transport + Send + 'static> MetricsHttpSender<T> {
         let mut last_warning = None::<Instant>;
 
         let mut stream = std::pin::pin!(stream);
-        // let nex = stream.next().await;
 
         loop {
             tokio::select! {

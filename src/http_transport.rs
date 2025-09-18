@@ -10,7 +10,10 @@ use std::{
     io,
     time::Duration,
 };
-use web_sys::AbortController;
+use web_sys::{
+    AbortController,
+    RequestCredentials,
+};
 
 pub trait Transport {
     fn enable_self_metrics(&mut self, _self_metrics: bool) {}
@@ -113,7 +116,8 @@ impl Transport for HttpPostTransport<EndpointDefined> {
         let req = RequestBuilder::new(endpoint.as_str())
             .method(Method::POST)
             .headers(headers)
-            .abort_signal(Some(&signal));
+            .abort_signal(Some(&signal))
+            .credentials(RequestCredentials::Include);
 
         async move {
             let body = body?;
