@@ -129,10 +129,9 @@ impl Transport for HttpPostTransport<EndpointDefined> {
                 if !res.ok() {
                     let text = res.text().await.map_err(|err| err.to_string()).unwrap_or_default();
                     let status = res.status();
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("Failed to fetch server info. status={status} {text}"),
-                    ));
+                    return Err(io::Error::other(format!(
+                        "Failed to fetch server info. status={status} {text}"
+                    )));
                 };
 
                 if self_metrics {
@@ -155,5 +154,5 @@ impl Transport for HttpPostTransport<EndpointDefined> {
 }
 
 fn err(err: impl Into<Box<dyn std::error::Error + Send + Sync>>) -> io::Error {
-    io::Error::new(io::ErrorKind::Other, err)
+    io::Error::other(err)
 }
