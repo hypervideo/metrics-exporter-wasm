@@ -41,6 +41,7 @@ mod tests {
         let event = Event::Metric {
             key: Key::from_parts("some-key", &[("key", "value")]),
             op: MetricOperation::SetGauge(42.2312313213f64),
+            time: None,
         };
         let events = Events::from(vec![event]);
 

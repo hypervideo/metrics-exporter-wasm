@@ -31,7 +31,11 @@ impl From<generated::Event> for Event {
                     .map(|entry| metrics::Label::new(entry.key, entry.value))
                     .collect::<Vec<_>>();
                 let key = Key::from_parts(name, labels);
-                Event::Metric { key, op: op.into() }
+                Event::Metric {
+                    key,
+                    op: op.into(),
+                    time: None,
+                }
             }
         }
     }
@@ -58,7 +62,10 @@ impl From<Event> for generated::Event {
                 description: description.to_string(),
             }),
 
-            Event::Metric { key, op } => {
+            // `time` is conveyed via the per-event `offset_ms` on the
+            // enclosing `RecordedEvent`, not within `generated::Event` itself,
+            // so it is intentionally dropped here.
+            Event::Metric { key, op, time: _ } => {
                 let (key_name, key_labels) = key.into_parts();
 
                 generated::Event::Metric(EventMetric {

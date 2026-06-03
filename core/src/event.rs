@@ -29,6 +29,15 @@ pub enum Event {
     Metric {
         key: Key,
         op: MetricOperation,
+        /// The absolute time at which this metric was recorded.
+        ///
+        /// When `None` (the default for metrics emitted through the `metrics`
+        /// crate macros), the recording timestamp is stamped when the event is
+        /// ingested by the sender/batch. When `Some(time)`, the metric is
+        /// recorded at that explicit absolute time, which is useful for metrics
+        /// that originated elsewhere (e.g. on another thread) and should be
+        /// recorded at their original time rather than at receive time.
+        time: Option<DateTime<Utc>>,
     },
 }
 
@@ -87,6 +96,8 @@ mod serialization_helper {
         Metric {
             key: Key,
             op: super::MetricOperation,
+            #[cfg_attr(feature = "serde", serde(default))]
+            time: Option<super::DateTime<super::Utc>>,
         },
     }
 
@@ -111,7 +122,7 @@ mod serialization_helper {
                     unit: unit.map(|u| u.as_str().to_owned()),
                     description: description.to_string(),
                 },
-                super::Event::Metric { key, op } => Event::Metric {
+                super::Event::Metric { key, op, time } => Event::Metric {
                     key: Key {
                         name: key.name().to_string(),
                         labels: key
@@ -120,6 +131,7 @@ mod serialization_helper {
                             .collect(),
                     },
                     op: *op,
+                    time: *time,
                 },
             }
         }
@@ -147,7 +159,7 @@ mod serialization_helper {
                     unit: unit.as_deref().and_then(Unit::from_string),
                     description: SharedString::from(description),
                 },
-                Event::Metric { key, op } => super::Event::Metric {
+                Event::Metric { key, op, time } => super::Event::Metric {
                     key: Key::from_parts(
                         key.name,
                         key.labels
@@ -156,6 +168,7 @@ mod serialization_helper {
                             .collect::<Vec<_>>(),
                     ),
                     op,
+                    time,
                 },
             }
         }
