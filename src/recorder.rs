@@ -3,6 +3,10 @@ use crate::{
     MetricOperation,
     MetricType,
 };
+use chrono::{
+    DateTime,
+    Utc,
+};
 use metrics::{
     Counter,
     CounterFn,
@@ -58,11 +62,18 @@ impl State {
     }
 
     fn push_metric(&self, key: &Key, op: MetricOperation) {
-        trace!(?key, ?op, should_send = %self.should_send(), "pushing metric");
+        self.push_metric_at(None, key, op);
+    }
+
+    /// Push a metric, optionally stamped with an explicit absolute recording
+    /// time. When `time` is `None`, the recording timestamp is stamped when the
+    /// event is ingested by the sender (the historical behavior).
+    fn push_metric_at(&self, time: Option<DateTime<Utc>>, key: &Key, op: MetricOperation) {
+        trace!(?time, ?key, ?op, should_send = %self.should_send(), "pushing metric");
         let tx = self.tx.clone();
         let key = key.clone();
         if self.should_send() {
-            let _ = tx.send(Event::Metric { key: key.clone(), op });
+            let _ = tx.send(Event::Metric { key, op, time });
         }
     }
 }
@@ -129,6 +140,52 @@ impl WasmRecorder {
 
     pub fn global() -> Option<Self> {
         GLOBAL_RECORDER.lock().expect("global recorder lock").clone()
+    }
+
+    /// Record a metric operation at an explicit absolute time, instead of
+    /// stamping it at emit/ingest time.
+    ///
+    /// This is intended for recording metrics that originated elsewhere (for
+    /// example on another thread or worker) at their *original* time rather
+    /// than at the time they are received by this recorder.
+    ///
+    /// The `time` is a [`chrono::DateTime<chrono::Utc>`], matching the
+    /// timestamp type carried by [`crate::RecordedEvent`].
+    ///
+    /// Metrics recorded through the normal `metrics` crate macros are
+    /// unaffected and continue to be timestamped at ingest time.
+    pub fn record_at(&self, time: DateTime<Utc>, key: Key, op: MetricOperation) {
+        self.state.push_metric_at(Some(time), &key, op);
+    }
+
+    /// Convenience helper to increment a counter at an explicit absolute time.
+    ///
+    /// See [`WasmRecorder::record_at`].
+    pub fn record_counter_at(&self, time: DateTime<Utc>, name: impl Into<KeyName>, value: u64) {
+        self.record_at(
+            time,
+            Key::from_name(name.into()),
+            MetricOperation::IncrementCounter(value),
+        );
+    }
+
+    /// Convenience helper to set a gauge at an explicit absolute time.
+    ///
+    /// See [`WasmRecorder::record_at`].
+    pub fn record_gauge_at(&self, time: DateTime<Utc>, name: impl Into<KeyName>, value: f64) {
+        self.record_at(time, Key::from_name(name.into()), MetricOperation::SetGauge(value));
+    }
+
+    /// Convenience helper to record a histogram value at an explicit absolute
+    /// time.
+    ///
+    /// See [`WasmRecorder::record_at`].
+    pub fn record_histogram_at(&self, time: DateTime<Utc>, name: impl Into<KeyName>, value: f64) {
+        self.record_at(
+            time,
+            Key::from_name(name.into()),
+            MetricOperation::RecordHistogram(value),
+        );
     }
 }
 

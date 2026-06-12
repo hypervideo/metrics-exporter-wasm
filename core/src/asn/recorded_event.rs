@@ -33,10 +33,13 @@ impl RecordedEvent {
 
 impl From<Event> for RecordedEvent {
     fn from(event: Event) -> Self {
-        RecordedEvent {
-            timestamp: util_time::now(),
-            event,
-        }
+        // If the event carries an explicit recording time, honor it. Otherwise
+        // stamp the time at which the event is ingested ("now").
+        let timestamp = match &event {
+            Event::Metric { time: Some(time), .. } => *time,
+            _ => util_time::now(),
+        };
+        RecordedEvent { timestamp, event }
     }
 }
 
