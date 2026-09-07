@@ -52,8 +52,7 @@ impl State {
         description: SharedString,
     ) {
         trace!(?key_name, ?metric_type, ?unit, ?description, "registering metric");
-        let tx = self.tx.clone();
-        let _ = tx.send(Event::Description {
+        let _ = self.tx.send(Event::Description {
             name: key_name,
             metric_type,
             unit,
@@ -62,18 +61,16 @@ impl State {
     }
 
     fn push_metric(&self, key: &Key, op: MetricOperation) {
-        self.push_metric_at(None, key, op);
+        self.push_metric_at(None, key.clone(), op);
     }
 
     /// Push a metric, optionally stamped with an explicit absolute recording
     /// time. When `time` is `None`, the recording timestamp is stamped when the
     /// event is ingested by the sender (the historical behavior).
-    fn push_metric_at(&self, time: Option<DateTime<Utc>>, key: &Key, op: MetricOperation) {
+    fn push_metric_at(&self, time: Option<DateTime<Utc>>, key: Key, op: MetricOperation) {
         trace!(?time, ?key, ?op, should_send = %self.should_send(), "pushing metric");
-        let tx = self.tx.clone();
-        let key = key.clone();
         if self.should_send() {
-            let _ = tx.send(Event::Metric { key, op, time });
+            let _ = self.tx.send(Event::Metric { key, op, time });
         }
     }
 }
@@ -155,7 +152,7 @@ impl WasmRecorder {
     /// Metrics recorded through the normal `metrics` crate macros are
     /// unaffected and continue to be timestamped at ingest time.
     pub fn record_at(&self, time: DateTime<Utc>, key: Key, op: MetricOperation) {
-        self.state.push_metric_at(Some(time), &key, op);
+        self.state.push_metric_at(Some(time), key, op);
     }
 
     /// Convenience helper to increment a counter at an explicit absolute time.
