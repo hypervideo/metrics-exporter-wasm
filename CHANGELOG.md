@@ -2,6 +2,11 @@
 
 This package tries to adhere to [semver](https://semver.org/).
 
+## [0.5.0]
+
+### Add/Change:
+The `utoipa-schema` feature implements the traits of utoipa 6 instead of utoipa 5.
+
 ## [0.4.1]
 
 ### Add/Change:
