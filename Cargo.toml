@@ -11,7 +11,7 @@ exclude = [
 ]
 
 [workspace.package]
-version = "0.4.1"
+version = "0.5.0"
 authors = ["Robert Krahn <robert@hyper.video>"]
 edition = "2021"
 license = "MPL-2.0"
@@ -24,13 +24,13 @@ chrono = { version = "0.4.40", default-features = false, features = ["now"] }
 futures = { version = "0.3.31", default-features = false }
 gloo = { version = "0.11.0", default-features = false, features = ["net"] }
 metrics = { version = "0.24.1" }
-metrics-exporter-wasm-core = { path = "./core", version = "0.4.0" }
+metrics-exporter-wasm-core = { path = "./core", version = "0.5.0" }
 scopeguard = "1.2.0"
 serde = { version = "1.0.219", features = ["derive"] }
 tokio = { version = "1.43.0", default-features = false, features = ["sync", "macros"] }
 tokio-util = { version = "0.7.13", default-features = false, features = ["futures-util"] }
 tracing = { version = "0.1.0", default-features = false, features = ["attributes"] }
-utoipa = { version = "5.3.1", features = ["chrono"] }
+utoipa = { version = "6.0.0", features = ["chrono"] }
 wasm-bindgen = { version = "0.2.100", default-features = false }
 wasm-bindgen-futures = "0.4.50"
 wasmtimer = "0.4.1"
